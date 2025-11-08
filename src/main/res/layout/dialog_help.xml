@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:padding="20dp"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <TextView
+        android:id="@+id/tvHelp"
+        android:textSize="16sp"
+        android:lineSpacingExtra="4dp"
+        android:text="1️⃣ 연습 모드에서는 단계별 안내를 따라 배우세요.\n\n2️⃣ 실전 모드에서는 랜덤 미션을 완수하세요.\n\n3️⃣ 학습 기록에서 결과를 확인할 수 있습니다."
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+</ScrollView>
