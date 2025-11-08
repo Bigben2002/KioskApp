@@ -11,10 +11,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.example.kiosk.data.model.KioskType
 import com.example.kiosk.ui.components.HelpDialog
 import com.example.kiosk.ui.components.LearningHistoryDialog
 import com.example.kiosk.ui.screens.main.MainMenuScreen
-import com.example.kiosk.ui.screens.simulator.KioskSimulatorScreen
+import com.example.kiosk.ui.screens.KioskSimulatorScreen
 import com.example.kiosk.ui.theme.KioskTheme
 
 class MainActivity : ComponentActivity() {
@@ -47,13 +48,18 @@ fun KioskApp() {
     // 다이얼로그 표시 여부 상태 관리
     var showHelpDialog by remember { mutableStateOf(false) }
     var showHistoryDialog by remember { mutableStateOf(false) }
+    var currentKioskType by remember { mutableStateOf(KioskType.BURGER) }
 
     // currentScreen 상태에 따라 다른 화면 Composable 표시
     when (currentScreen) {
         ScreenState.MENU -> {
             MainMenuScreen(
-                onNavigateToPractice = { currentScreen = ScreenState.PRACTICE },
-                onNavigateToReal = { currentScreen = ScreenState.REAL },
+                onNavigateToPractice = { selectedType ->
+                    currentKioskType = selectedType
+                    currentScreen = ScreenState.PRACTICE },
+                onNavigateToReal = { selectedType ->
+                    currentKioskType = selectedType
+                    currentScreen = ScreenState.REAL },
                 onOpenHelp = { showHelpDialog = true },
                 onOpenHistory = { showHistoryDialog = true }
             )
@@ -61,12 +67,14 @@ fun KioskApp() {
         ScreenState.PRACTICE -> {
             KioskSimulatorScreen(
                 isPracticeMode = true,
+                kioskType = currentKioskType,
                 onExit = { currentScreen = ScreenState.MENU }
             )
         }
         ScreenState.REAL -> {
             KioskSimulatorScreen(
                 isPracticeMode = false,
+                kioskType = currentKioskType,
                 onExit = { currentScreen = ScreenState.MENU }
             )
         }

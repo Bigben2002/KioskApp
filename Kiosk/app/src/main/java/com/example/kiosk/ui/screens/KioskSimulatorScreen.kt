@@ -1,13 +1,16 @@
-package com.example.kiosk.ui.screens.simulator
+package com.example.kiosk.ui.screens
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -20,31 +23,28 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.kiosk.data.model.CartItem
+import com.example.kiosk.data.model.KioskType
 import com.example.kiosk.data.model.MenuItem
-import com.example.kiosk.ui.components.KioskButton
+import com.example.kiosk.data.model.Mission
 import com.example.kiosk.ui.components.KioskCard
 import java.text.NumberFormat
 import java.util.Locale
-import com.example.kiosk.data.model.CartItem
-import androidx.compose.ui.window.Dialog
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.verticalScroll
-import com.example.kiosk.data.model.Mission
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.window.Dialog
+import com.example.kiosk.ui.components.OptionDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KioskSimulatorScreen(
     isPracticeMode: Boolean,
+    kioskType: KioskType, // 👈 [핵심] 어떤 키오스크인지 외부에서 전달받음
     onExit: () -> Unit,
     viewModel: KioskViewModel = viewModel()
 ) {
@@ -54,10 +54,15 @@ fun KioskSimulatorScreen(
     val practiceStep by viewModel.practiceStep.collectAsState()
     val orderResult by viewModel.orderResult.collectAsState()
 
-    var selectedCategory by remember { mutableStateOf("버거") }
+    // 선택된 카테고리 초기값을 현재 키오스크 타입의 첫 번째 카테고리로 설정
+    var selectedCategory by remember { mutableStateOf(kioskType.categories.first()) }
     var showCartDialog by remember { mutableStateOf(false) }
+    var selectedMenuItemForOption by remember { mutableStateOf<MenuItem?>(null) }
 
-    LaunchedEffect(Unit) { viewModel.init(isPracticeMode) }
+    // ViewModel 초기화 시 kioskType 전달
+    LaunchedEffect(Unit) {
+        viewModel.init(isPracticeMode, kioskType)
+    }
 
     if (orderResult != null) {
         OrderResultScreen(result = orderResult!!, mission = currentMission, cart = cart, totalPrice = totalPrice, onExit = onExit)
@@ -67,9 +72,9 @@ fun KioskSimulatorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("햄버거 가게", color = Color.White) },
+                title = { Text(kioskType.title, color = Color.White) }, // 👈 제목 동적 변경
                 navigationIcon = { IconButton(onClick = onExit) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "뒤로", tint = Color.White) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFDC2626))
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = kioskType.themeColor) // 👈 테마 색상 적용
             )
         },
         bottomBar = {
@@ -78,7 +83,7 @@ fun KioskSimulatorScreen(
                     Button(
                         onClick = { showCartDialog = true },
                         modifier = Modifier.fillMaxWidth().padding(16.dp).height(56.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                        colors = ButtonDefaults.buttonColors(containerColor = kioskType.themeColor), // 👈 버튼 색상도 테마에 맞춤
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -88,7 +93,9 @@ fun KioskSimulatorScreen(
                                 Text("장바구니", fontSize = 18.sp)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Surface(shape = CircleShape, color = Color.White, modifier = Modifier.size(24.dp)) {
-                                    Box(contentAlignment = Alignment.Center) { Text("${cart.sumOf { it.quantity }}", color = Color(0xFFDC2626), fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text("${cart.sumOf { it.quantity }}", color = kioskType.themeColor, fontSize = 14.sp, fontWeight = FontWeight.Bold) // 👈 수량 배지 색상 변경
+                                    }
                                 }
                             }
                             Text("${NumberFormat.getNumberInstance(Locale.KOREA).format(totalPrice)}원", fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -105,16 +112,48 @@ fun KioskSimulatorScreen(
             if (isPracticeMode && practiceStep == 0) {
                 WelcomeScreen(onStart = { viewModel.startPractice() })
             } else {
-                CategoryTabs(categories = viewModel.categories, selectedCategory = selectedCategory, onSelect = { selectedCategory = it; viewModel.selectCategory(isPracticeMode) })
-                MenuList(menuItems = viewModel.menuItems.filter { it.category == selectedCategory }, onAdd = { viewModel.addToCart(it, isPracticeMode) })
+                // ViewModel에서 현재 타입에 맞는 카테고리와 메뉴를 가져옴
+                CategoryTabs(
+                    categories = viewModel.getCurrentCategories(),
+                    selectedCategory = selectedCategory,
+                    themeColor = kioskType.themeColor, // 👈 탭 선택 색상 전달
+                    onSelect = {
+                        selectedCategory = it
+                        viewModel.selectCategory(isPracticeMode)
+                    }
+                )
+                MenuList(
+                    menuItems = viewModel.getCurrentMenuItems()
+                        .filter { it.category == selectedCategory },
+                    defaultIcon = kioskType.icon, // 👈 아이콘(🍔 or ☕) 전달
+                    themeColor = kioskType.themeColor, // 👈 플러스 버튼 색상 전달
+                    onAdd = { item ->
+                        if (item.options.isNotEmpty()) {
+                            selectedMenuItemForOption = item
+                        } else {
+                            viewModel.addToCart(item, isPracticeMode)
+                        }
+                    }
+                )
             }
         }
+        if (selectedMenuItemForOption != null) {
+            OptionDialog(
+                menuItem = selectedMenuItemForOption!!,
+                themeColor = kioskType.themeColor,
+                onDismiss = { selectedMenuItemForOption = null },
+                onAddToCart = { selectedOption ->
+                    viewModel.addToCart(selectedMenuItemForOption!!, isPracticeMode, selectedOption)
+                    selectedMenuItemForOption = null // 팝업 닫기
+                }
+            )
+        }
     }
-
     if (showCartDialog) {
         CartDialog(
             cart = cart,
             totalPrice = totalPrice,
+            themeColor = kioskType.themeColor, // 👈 다이얼로그에도 테마 색상 전달
             onDismiss = { showCartDialog = false },
             onUpdateQty = viewModel::updateQuantity,
             onCheckout = { showCartDialog = false; viewModel.checkout(isPracticeMode) }
@@ -122,6 +161,87 @@ fun KioskSimulatorScreen(
     }
 }
 
+// ==================== 하위 컴포넌트들도 테마를 적용하도록 수정 ====================
+
+@Composable
+fun CategoryTabs(categories: List<String>, selectedCategory: String, themeColor: Color, onSelect: (String) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth().background(Color.White).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        categories.forEach { category ->
+            val isSelected = category == selectedCategory
+            Button(
+                onClick = { onSelect(category) },
+                modifier = Modifier.weight(1f).height(48.dp),
+                // 선택된 탭의 색상을 themeColor로 변경
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isSelected) themeColor else Color(0xFFF3F4F6),
+                    contentColor = if (isSelected) Color.White else Color(0xFF374151)
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) { Text(category, fontSize = 18.sp) }
+        }
+    }
+}
+
+@Composable
+fun MenuList(menuItems: List<MenuItem>, defaultIcon: String, themeColor: Color, onAdd: (MenuItem) -> Unit) {
+    LazyVerticalGrid(columns = GridCells.Fixed(2), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        items(menuItems) { item ->
+            KioskCard(onClick = { onAdd(item) }, modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f).background(Color(0xFFE5E7EB), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                        Text(defaultIcon, fontSize = 64.sp) // 👈 전달받은 아이콘 사용
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(item.name, fontSize = 18.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("${NumberFormat.getNumberInstance(Locale.KOREA).format(item.price)}원", fontSize = 16.sp, color = Color(0xFF4B5563))
+                        // 플러스 버튼 색상도 테마에 맞춤
+                        Icon(Icons.Default.Add, null, tint = themeColor, modifier = Modifier.background(themeColor.copy(alpha = 0.1f), CircleShape).padding(4.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CartDialog(
+    cart: List<CartItem>,
+    totalPrice: Int,
+    themeColor: Color, // 👈 테마 색상 받기
+    onDismiss: () -> Unit,
+    onUpdateQty: (String, Int) -> Unit,
+    onCheckout: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(modifier = Modifier.fillMaxWidth().heightIn(max = 600.dp), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("장바구니", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "닫기", tint = Color.Gray) }
+                }
+                HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
+                if (cart.isEmpty()) {
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { Text("장바구니가 비었습니다", fontSize = 18.sp, color = Color.Gray) }
+                } else {
+                    LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        items(cart) { item -> CartItemRow(item, onUpdateQty) }
+                    }
+                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+                Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("총 금액", fontSize = 20.sp, fontWeight = FontWeight.Medium)
+                    Text("${NumberFormat.getNumberInstance(Locale.KOREA).format(totalPrice)}원", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = themeColor) // 👈 총 금액 색상
+                }
+                Button(onClick = onCheckout, modifier = Modifier.fillMaxWidth().height(56.dp), enabled = cart.isNotEmpty(), shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = themeColor, disabledContainerColor = Color.Gray)) { // 👈 결제 버튼 색상
+                    Text("결제하기", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
 @Composable
 fun PracticeGuide(step: Int) {
     val messages = listOf("화면 하단의 '시작하기' 버튼을 눌러주세요", "원하시는 메뉴 종류를 선택해주세요", "메뉴를 터치해서 선택해주세요", "하단 장바구니를 눌러 결제해주세요")
@@ -293,8 +413,11 @@ private fun CartItemRow(
         // 메뉴 이름과 가격
         Column(modifier = Modifier.weight(1f)) {
             Text(item.menuItem.name, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+            if (item.selectedOption != null) {
+                Text("(${item.selectedOption.name})", fontSize = 14.sp, color = Color(0xFF2563EB)) // 파란색 등으로 강조
+            }
             Text(
-                "${NumberFormat.getNumberInstance(Locale.KOREA).format(item.menuItem.price * item.quantity)}원",
+                "${NumberFormat.getNumberInstance(Locale.KOREA).format((item.menuItem.price + (item.selectedOption?.price ?: 0)) * item.quantity)}원",
                 fontSize = 16.sp,
                 color = Color.Gray
             )
