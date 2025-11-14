@@ -26,7 +26,6 @@ fun OptionDialog(
     onDismiss: () -> Unit,
     onAddToCart: (ItemOption) -> Unit
 ) {
-    // 현재 선택된 옵션을 저장하는 상태 (초기값은 첫 번째 옵션)
     var selectedOption by remember { mutableStateOf(menuItem.options.first()) }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -39,7 +38,7 @@ fun OptionDialog(
                 Text("${menuItem.name} 옵션 선택", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 옵션 리스트 표시
+                // 옵션 리스트
                 menuItem.options.forEach { option ->
                     OptionRow(
                         option = option,
@@ -52,12 +51,14 @@ fun OptionDialog(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // 하단 버튼 (취소 / 담기)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = onDismiss,
                         modifier = Modifier.weight(1f).height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5E7EB), contentColor = Color.Black),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFE5E7EB),
+                            contentColor = Color.Black
+                        ),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text("취소")
@@ -68,7 +69,6 @@ fun OptionDialog(
                         colors = ButtonDefaults.buttonColors(containerColor = themeColor),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        // 옵션 가격이 포함된 최종 가격 표시
                         val finalPrice = menuItem.price + selectedOption.price
                         Text("${NumberFormat.getNumberInstance(Locale.KOREA).format(finalPrice)}원 담기")
                     }
@@ -98,7 +98,12 @@ private fun OptionRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(option.name, fontSize = 16.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal, color = if(isSelected) themeColor else Color.Black)
+        Text(
+            option.name,
+            fontSize = 16.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color = if (isSelected) themeColor else Color.Black
+        )
         if (option.price > 0) {
             Text("+${option.price}원", color = Color.Gray, fontSize = 14.sp)
         }

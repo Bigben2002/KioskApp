@@ -49,7 +49,7 @@ fun KioskButton(
                 modifier = modifier,
                 enabled = enabled,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF0F172A), // slate-900 (React의 primary 색상 유사)
+                    containerColor = Color(0xFF0F172A), // slate-900
                     contentColor = Color.White
                 ),
                 shape = RoundedCornerShape(8.dp),
@@ -57,7 +57,7 @@ fun KioskButton(
                 content = content
             )
         }
-        // shadcn의 'destructive' 스타일 (빨간색)
+        // 'destructive' 스타일
         ButtonVariant.DESTRUCTIVE -> {
             Button(
                 onClick = onClick,
@@ -72,37 +72,35 @@ fun KioskButton(
                 content = content
             )
         }
-        // shadcn의 'outline' 스타일 (테두리만)
+        // 'outline' 스타일
         ButtonVariant.OUTLINE -> {
             OutlinedButton(
                 onClick = onClick,
                 modifier = modifier,
                 enabled = enabled,
                 shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(1.dp, Color(0xFFE2E8F0)), // slate-200
+                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color(0xFF0F172A) // slate-900
+                    contentColor = Color(0xFF0F172A)
                 ),
                 contentPadding = contentPadding,
                 content = content
             )
         }
-        // 나머지 variant도 필요하면 추가...
         else -> {
-            // 기본형으로 대체
             Button(onClick = onClick, modifier = modifier, enabled = enabled, content = content)
         }
     }
 }
 
 // =================================================================
-// 2. Card 컴포넌트 (ui/card.tsx 대체)
+// 2. Card 컴포넌트
 // =================================================================
 @Composable
 fun KioskCard(
     modifier: Modifier = Modifier,
     backgroundColor: Color = Color.White,
-    borderColor: Color = Color(0xFFE2E8F0), // slate-200
+    borderColor: Color = Color(0xFFE2E8F0),
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -110,10 +108,9 @@ fun KioskCard(
         onClick = onClick ?: {},
         enabled = onClick != null,
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp), // rounded-xl
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         border = BorderStroke(1.dp, borderColor),
-        // shadow-sm 효과를 위해 elevation 추가
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -122,8 +119,6 @@ fun KioskCard(
     }
 }
 
-// CardHeader, CardTitle 등은 Compose에서는 그냥 Text 등으로 대체하는 게 더 자연스럽지만,
-// 굳이 만든다면 아래와 같이 할 수 있습니다.
 @Composable
 fun KioskCardHeader(
     modifier: Modifier = Modifier,
@@ -137,11 +132,11 @@ fun KioskCardContent(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Column(modifier = modifier.padding(horizontal = 24.dp, vertical = 0.dp), content = content)
+    Column(modifier = modifier.padding(horizontal = 24.dp), content = content)
 }
 
 // =================================================================
-// 3. Badge 컴포넌트 (ui/badge.tsx 대체)
+// 3. Badge 컴포넌트
 // =================================================================
 enum class BadgeVariant {
     DEFAULT, SECONDARY, DESTRUCTIVE, OUTLINE
@@ -154,9 +149,9 @@ fun KioskBadge(
     variant: BadgeVariant = BadgeVariant.DEFAULT
 ) {
     val (backgroundColor, contentColor) = when (variant) {
-        BadgeVariant.DEFAULT -> Color(0xFF0F172A) to Color.White // slate-900
-        BadgeVariant.DESTRUCTIVE -> Color(0xFFEF4444) to Color.White // red-500
-        BadgeVariant.SECONDARY -> Color(0xFFF1F5F9) to Color(0xFF0F172A) // slate-100
+        BadgeVariant.DEFAULT -> Color(0xFF0F172A) to Color.White
+        BadgeVariant.DESTRUCTIVE -> Color(0xFFEF4444) to Color.White
+        BadgeVariant.SECONDARY -> Color(0xFFF1F5F9) to Color(0xFF0F172A)
         BadgeVariant.OUTLINE -> Color.Transparent to Color(0xFF0F172A)
     }
 
@@ -166,7 +161,7 @@ fun KioskBadge(
         modifier = modifier,
         color = backgroundColor,
         contentColor = contentColor,
-        shape = RoundedCornerShape(percent = 50), // 완전히 둥글게 (rounded-full)
+        shape = RoundedCornerShape(percent = 50),
         border = border
     ) {
         Text(
