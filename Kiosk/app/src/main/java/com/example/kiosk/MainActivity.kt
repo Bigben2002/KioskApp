@@ -11,6 +11,7 @@ import com.example.kiosk.data.model.KioskType
 import com.example.kiosk.ui.components.HelpDialog
 import com.example.kiosk.ui.components.LearningHistoryDialog
 import com.example.kiosk.ui.screens.KioskSimulatorScreen
+import com.example.kiosk.ui.screens.burger.BurgerKioskScreen  // ✨ 새로 추가
 import com.example.kiosk.ui.screens.cinema.CinemaFlowRoot
 import com.example.kiosk.ui.screens.main.MainMenuScreen
 import com.example.kiosk.ui.screens.main.PracticeKioskSelectScreen
@@ -50,13 +51,12 @@ fun KioskApp() {
         ScreenState.MENU -> {
             MainMenuScreen(
                 onNavigateToPractice = {
-                    // 이전: PRACTICE 로 바로 진입
-                    // 변경: 선택 페이지로
                     currentScreen = ScreenState.PRACTICE_SELECT
                 },
                 onNavigateToReal = {
-                    // 실전 모드는 기존 흐름 유지(원하면 선택 페이지로 확장 가능)
-                    currentScreen = ScreenState.REAL
+                    // 실전 모드도 선택 페이지로 이동하도록 변경 (선택 사항)
+                    currentScreen = ScreenState.PRACTICE_SELECT
+                    // 또는 기존처럼 바로 REAL로 가려면: currentScreen = ScreenState.REAL
                 },
                 onOpenHelp = { showHelpDialog = true },
                 onOpenHistory = { showHistoryDialog = true }
@@ -67,7 +67,6 @@ fun KioskApp() {
             PracticeKioskSelectScreen(
                 onSelect = { type ->
                     currentKioskType = type
-                    // BURGER/CAFE/CINEMA 공통으로 PRACTICE 진입
                     currentScreen = ScreenState.PRACTICE
                 },
                 onBack = { currentScreen = ScreenState.MENU }
@@ -75,34 +74,58 @@ fun KioskApp() {
         }
 
         ScreenState.PRACTICE -> {
-            // BURGER/CAFE는 기존 시뮬레이터 사용, CINEMA는 루트에서 처리
-            if (currentKioskType == KioskType.CINEMA) {
-                CinemaFlowRoot(
-                    isPracticeMode = true,
-                    onExit = { currentScreen = ScreenState.MENU }
-                )
-            } else {
-                KioskSimulatorScreen(
-                    isPracticeMode = true,
-                    kioskType = currentKioskType,
-                    onExit = { currentScreen = ScreenState.MENU }
-                )
+            // ✨ 핵심 분기: 키오스크 타입에 따라 다른 화면으로 이동
+            when (currentKioskType) {
+                KioskType.BURGER -> {
+                    // 🍔 새로운 버거 키오스크 (고급 기능)
+                    BurgerKioskScreen(
+                        isPracticeMode = true,
+                        onExit = { currentScreen = ScreenState.MENU }
+                    )
+                }
+                KioskType.CINEMA -> {
+                    // 🎬 영화관 전용 화면
+                    CinemaFlowRoot(
+                        isPracticeMode = true,
+                        onExit = { currentScreen = ScreenState.MENU }
+                    )
+                }
+                else -> {
+                    // ☕ 카페, 식당 등은 기존 시뮬레이터 사용
+                    KioskSimulatorScreen(
+                        isPracticeMode = true,
+                        kioskType = currentKioskType,
+                        onExit = { currentScreen = ScreenState.MENU }
+                    )
+                }
             }
         }
 
         ScreenState.REAL -> {
-            // REAL에서도 영화관을 선택한 상태라면(나중 확장용), 루트로 보낼 수 있음.
-            if (currentKioskType == KioskType.CINEMA) {
-                CinemaFlowRoot(
-                    isPracticeMode = false,
-                    onExit = { currentScreen = ScreenState.MENU }
-                )
-            } else {
-                KioskSimulatorScreen(
-                    isPracticeMode = false,
-                    kioskType = currentKioskType,
-                    onExit = { currentScreen = ScreenState.MENU }
-                )
+            // 실전 모드도 동일하게 분기 처리
+            when (currentKioskType) {
+                KioskType.BURGER -> {
+                    // 🍔 새로운 버거 키오스크 (미션 모드)
+                    BurgerKioskScreen(
+                        isPracticeMode = false,
+                        onExit = { currentScreen = ScreenState.MENU }
+                    )
+                }
+                KioskType.CINEMA -> {
+                    // 🎬 영화관 전용 화면
+                    CinemaFlowRoot(
+                        isPracticeMode = false,
+                        onExit = { currentScreen = ScreenState.MENU }
+                    )
+                }
+                else -> {
+                    // ☕ 카페, 식당 등은 기존 시뮬레이터 사용
+                    KioskSimulatorScreen(
+                        isPracticeMode = false,
+                        kioskType = currentKioskType,
+                        onExit = { currentScreen = ScreenState.MENU }
+                    )
+                }
             }
         }
     }
