@@ -10,10 +10,13 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,13 +33,24 @@ import com.example.kiosk.ui.components.KioskCard
 import java.text.NumberFormat
 import java.util.Locale
 
+// --- [추가] 이미지 관련 import ---
+import androidx.compose.foundation.Image
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.example.kiosk.R // 안드로이드 R 리소스
+// --- [끝] ---
+
 // ------------------------------------------------------------
 // 연습 모드 시작 화면
 // ------------------------------------------------------------
 @Composable
 fun PracticeWelcomeScreen(onStart: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -52,7 +67,9 @@ fun PracticeWelcomeScreen(onStart: () -> Unit) {
         Spacer(modifier = Modifier.height(40.dp))
         Button(
             onClick = onStart,
-            modifier = Modifier.height(64.dp).width(200.dp),
+            modifier = Modifier
+                .height(64.dp)
+                .width(200.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
         ) {
             Text("시작하기", fontSize = 24.sp)
@@ -64,7 +81,7 @@ fun PracticeWelcomeScreen(onStart: () -> Unit) {
 // HOME 화면
 // ------------------------------------------------------------
 @Composable
-fun CinemaHome(
+fun CinemaHomeScreen(
     onTicket: () -> Unit,
     onPrint: () -> Unit,
     onRefund: () -> Unit,
@@ -78,14 +95,18 @@ fun CinemaHome(
     )
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(items) { (label, action) ->
             ElevatedCard(onClick = action) {
                 Box(
-                    modifier = Modifier.fillMaxWidth().height(120.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(label, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
@@ -139,12 +160,16 @@ fun BookingScreen(
 
     Column(Modifier.fillMaxSize()) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             OutlinedButton(
                 onClick = { datePickerOpen = true },
-                modifier = Modifier.weight(1f).height(48.dp)
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp)
             ) {
                 Icon(Icons.Default.CalendarMonth, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
@@ -152,7 +177,9 @@ fun BookingScreen(
             }
             OutlinedButton(
                 onClick = onShowTimetable,
-                modifier = Modifier.weight(1f).height(48.dp)
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp)
             ) { Text("상영시간표 보기") }
         }
 
@@ -160,7 +187,9 @@ fun BookingScreen(
             BookingStep.MOVIE -> {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp),
                     contentPadding = PaddingValues(vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -176,7 +205,9 @@ fun BookingScreen(
             }
 
             BookingStep.TIME -> {
-                Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                Column(Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)) {
                     if (selectedMovie == null) {
                         Text("먼저 영화를 선택해주세요.", color = Color.Gray, modifier = Modifier.padding(vertical = 8.dp))
                     } else {
@@ -196,16 +227,22 @@ fun BookingScreen(
                             }
                         }
                         Spacer(Modifier.weight(1f))
-                        Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             OutlinedButton(
                                 onClick = { onChangeStep(BookingStep.MOVIE) },
-                                modifier = Modifier.weight(1f).height(56.dp)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(56.dp)
                             ) { Text("이전") }
                             val canNext = selectedTime != null
                             KioskButton(
                                 onClick = { onChangeStep(BookingStep.THEATER_PEOPLE) },
                                 enabled = canNext,
-                                modifier = Modifier.weight(1f).height(56.dp)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(56.dp)
                             ) { Text("다음") }
                         }
                     }
@@ -256,16 +293,22 @@ fun BookingScreen(
 
                     Spacer(Modifier.height(24.dp))
                     Row(
-                        Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(
                             onClick = { onChangeStep(BookingStep.TIME) },
-                            modifier = Modifier.weight(1f).height(48.dp)
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
                         ) { Text("이전 (시간)") }
                         OutlinedButton(
                             onClick = onBack,
-                            modifier = Modifier.weight(1f).height(48.dp)
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
                         ) { Text("처음으로") }
                     }
                 }
@@ -363,7 +406,9 @@ private fun PeopleSelectView(
         KioskButton(
             onClick = onNextToSeat,
             enabled = enabled && totalPeopleCount > 0,
-            modifier = Modifier.fillMaxWidth().height(56.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
         ) {
             Text("좌석 선택 (${totalPeopleCount}명)", fontSize = 18.sp, modifier = Modifier.padding(horizontal = 16.dp))
         }
@@ -417,22 +462,30 @@ private fun MovieCardCompact(
         onClick = onClickPoster
     ) {
         Column(Modifier.padding(10.dp)) {
-            Surface(
+            val imageResId = when (movie.posterName) {
+                "포스터 1" -> R.drawable.poster_1
+                "포스터 2" -> R.drawable.poster_2
+                "포스터 3" -> R.drawable.poster_3
+                "포스터 4" -> R.drawable.poster_4
+                "포스터 5" -> R.drawable.poster_5
+                "포스터 6" -> R.drawable.poster_6
+                "포스터 7" -> R.drawable.poster_7
+                "포스터 8" -> R.drawable.poster_8
+                "포스터 9" -> R.drawable.poster_9
+                else -> R.drawable.ic_launcher_background // 기본 이미지
+            }
+
+            Image(
+                painter = painterResource(id = imageResId),
+                contentDescription = movie.title,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(2f / 3f),
-                shape = RoundedCornerShape(8.dp),
-                color = Color(0xFFE5E7EB)
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(4.dp)) {
-                    Text(
-                        if (movie.posterName.isNotBlank()) movie.posterName else movie.title,
-                        fontSize = 14.sp,
-                        color = Color(0xFF374151),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
+                    .aspectRatio(2f / 3f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFFE5E7EB)),
+                contentScale = ContentScale.Crop
+            )
+
             Spacer(Modifier.height(8.dp))
             Text(movie.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
             Text("${movie.runningTimeMin}분", fontSize = 12.sp, color = Color(0xFF6B7280))
@@ -470,21 +523,26 @@ private fun TheaterCard(
 fun SeatSelectScreen(
     peopleCount: Int,
     selectedSeats: Set<String>,
-    reservedSeats: Set<String>, // ✅ [요청 1] 예약 좌석 받기
+    reservedSeats: Set<String>,
     onToggleSeat: (String) -> Unit,
     onNext: () -> Unit,
     onBack: () -> Unit
 ) {
-    val context = LocalContext.current // ✅ [요청 2] 토스트 메시지용 Context
+    val context = LocalContext.current
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
+    Column(Modifier
+        .fillMaxSize()
+        .padding(16.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("좌석 선택", fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Text("선택 ${selectedSeats.size}/$peopleCount", color = Color(0xFF2563EB), fontSize = 18.sp)
         }
         Spacer(Modifier.height(8.dp))
         Box(
-            Modifier.fillMaxWidth().height(28.dp).background(Color(0xFFE5E7EB), RoundedCornerShape(6.dp)),
+            Modifier
+                .fillMaxWidth()
+                .height(28.dp)
+                .background(Color(0xFFE5E7EB), RoundedCornerShape(6.dp)),
             contentAlignment = Alignment.Center
         ) { Text("SCREEN", fontSize = 12.sp, color = Color(0xFF6B7280), fontWeight = FontWeight.Bold) }
 
@@ -497,17 +555,22 @@ fun SeatSelectScreen(
             selectedSeats = selectedSeats,
             reservedSeats = reservedSeats,
             onToggle = onToggleSeat,
-            // ✅ [요청 2] 예약된 좌석 클릭 시 토스트 메시지
             onReservedClick = {
                 Toast.makeText(context, "이미 선택된 좌석입니다.", Toast.LENGTH_SHORT).show()
             }
         )
 
         Spacer(Modifier.weight(1f))
-        Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f).height(56.dp)) { Text("이전") }
+        Row(Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(onClick = onBack, modifier = Modifier
+                .weight(1f)
+                .height(56.dp)) { Text("이전") }
             val enabled = selectedSeats.size == peopleCount
-            KioskButton(onClick = onNext, enabled = enabled, modifier = Modifier.weight(1f).height(56.dp)) { Text("결제하기") }
+            KioskButton(onClick = onNext, enabled = enabled, modifier = Modifier
+                .weight(1f)
+                .height(56.dp)) { Text("결제하기") }
         }
     }
 }
@@ -520,11 +583,13 @@ private fun SeatGridWithAisle(
     selectedSeats: Set<String>,
     reservedSeats: Set<String>,
     onToggle: (String) -> Unit,
-    onReservedClick: () -> Unit // ✅ [요청 2] 예약 좌석 클릭 이벤트
+    onReservedClick: () -> Unit
 ) {
     Column(Modifier.verticalScroll(rememberScrollState())) {
         rows.forEach { r ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     leftCols.forEach { c ->
                         val code = "$r$c"
@@ -533,7 +598,6 @@ private fun SeatGridWithAisle(
                             code = code,
                             isReserved = isReserved,
                             isSelected = selectedSeats.contains(code),
-                            // ✅ [요청 2] 예약된 좌석이면 onReservedClick, 아니면 onToggle
                             onClick = {
                                 if (isReserved) onReservedClick() else onToggle(code)
                             }
@@ -563,22 +627,202 @@ private fun SeatGridWithAisle(
 @Composable
 private fun SeatChip(
     code: String,
-    isReserved: Boolean, // '예약됨' 상태
-    isSelected: Boolean, // '내가 선택' 상태
+    isReserved: Boolean,
+    isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    // ✅ [요청 1] 짙은 회색 (예약됨) 상태 추가
     val bg = when {
-        isReserved -> Color(0xFF6B7280) // 짙은 회색 (예약됨)
-        isSelected -> Color(0xFF2563EB) // 파란색 (내가 선택)
-        else -> Color(0xFFF3F4F6)       // 밝은 회색 (선택 가능)
+        isReserved -> Color(0xFF6B7280)
+        isSelected -> Color(0xFF2563EB)
+        else -> Color(0xFFF3F4F6)
     }
 
     val fg = if (isSelected || isReserved) Color.White else Color(0xFF111827)
 
     Surface(
-        modifier = Modifier.size(28.dp).clickable { onClick() }, // 클릭은 항상 가능
+        modifier = Modifier
+            .size(28.dp)
+            .clickable { onClick() },
         shape = RoundedCornerShape(6.dp),
         color = bg
     ) { Box(contentAlignment = Alignment.Center) { Text(code, fontSize = 10.sp, color = fg) } }
+}
+
+// ------------------------------------------------------------
+// ✅ 예매 티켓 출력 화면 (로직 수정)
+// ------------------------------------------------------------
+@Composable
+fun PrintTicketScreen(
+    onBack: () -> Unit
+) {
+    // --- 데이터 로드 ---
+    val movies = rememberMovies()
+    val theaters = rememberTheaters()
+    val bookedTickets = rememberBookedTickets(movies, theaters) // 예매된 티켓 Map
+
+    // --- 다이얼로그 상태 관리 ---
+    var showInputDialog by remember { mutableStateOf(false) }
+    var foundTicket by remember { mutableStateOf<BookedTicket?>(null) } // 성공 팝업
+    var showErrorDialog by remember { mutableStateOf(false) }     // 실패 팝업
+
+    // --- ✅ [요청] 티켓 출력 상태 ---
+    var isPrinting by remember { mutableStateOf(false) }
+
+    if (isPrinting) {
+        // --- ✅ [요청] 1. 티켓 출력 중 화면 ---
+        TicketPrintingScreen(
+            onDone = onBack,  // onBack은 CinemaFlowRoot에서 resetFlow()와 연결됨
+            onAgain = onBack  // onBack은 CinemaFlowRoot에서 resetFlow()와 연결됨
+        )
+    } else {
+        // --- 2. 티켓 조회 메인 화면 ---
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.QrCodeScanner,
+                contentDescription = null,
+                modifier = Modifier.size(128.dp),
+                tint = Color(0xFF374151)
+            )
+            Spacer(Modifier.height(24.dp))
+            Text(
+                "QR코드를 입력해주세요\n혹은 예매 번호를 입력해주세요",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                lineHeight = 30.sp
+            )
+            Spacer(Modifier.height(40.dp))
+
+            // --- 예매 번호 입력 버튼 ---
+            KioskButton(
+                onClick = { showInputDialog = true },
+                modifier = Modifier
+                    .height(56.dp)
+                    .fillMaxWidth()
+            ) {
+                Text("예매 번호로 찾기", fontSize = 18.sp)
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .height(56.dp)
+                    .fillMaxWidth()
+            ) {
+                Text("홈으로 돌아가기", fontSize = 18.sp)
+            }
+        }
+    }
+
+
+    // --- 다이얼로그 로직 ---
+
+    // 1. 번호 입력 팝업
+    if (showInputDialog) {
+        BookingNumberInputDialog(
+            onDismiss = { showInputDialog = false },
+            onConfirm = { number ->
+                showInputDialog = false
+                // 입력된 번호로 티켓 조회
+                val ticket = bookedTickets[number]
+                if (ticket != null) {
+                    foundTicket = ticket // 찾았으면 성공 팝업
+                } else {
+                    showErrorDialog = true // 못 찾았으면 실패 팝업
+                }
+            }
+        )
+    }
+
+    // 2. 조회 성공 팝업 (영수증)
+    if (foundTicket != null) {
+        BookingResultDialog(
+            ticket = foundTicket!!,
+            movie = movies.find { it.id == foundTicket!!.movieId },
+            theater = theaters.find { it.id == foundTicket!!.theaterId },
+            onDismiss = { foundTicket = null },
+            // ✅ [요청] "실물 티켓 출력" 버튼 클릭 시
+            onPrintTicket = {
+                foundTicket = null // 팝업 닫기
+                isPrinting = true  // 출력 화면으로 전환
+            }
+        )
+    }
+
+    // 3. 조회 실패 팝업
+    if (showErrorDialog) {
+        AlertDialog(
+            onDismissRequest = { showErrorDialog = false },
+            title = { Text("조회 실패") },
+            text = { Text("일치하는 예매 내역이 없습니다.\n(테스트 번호: 112233445566)") },
+            confirmButton = {
+                Button(onClick = { showErrorDialog = false }) {
+                    Text("확인")
+                }
+            }
+        )
+    }
+}
+
+// ------------------------------------------------------------
+// ✅ [요청] 티켓 출력 완료 화면 (신규 추가)
+// ------------------------------------------------------------
+@Composable
+private fun TicketPrintingScreen(
+    onDone: () -> Unit,
+    onAgain: () -> Unit
+) {
+    val themeColor = Color(0xFF16A34A) // Green (결제 완료와 동일한 테마)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center // 세로 중앙 정렬
+    ) {
+        // 결과 아이콘
+        Surface(
+            shape = CircleShape,
+            color = themeColor,
+            modifier = Modifier.size(100.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(64.dp))
+            }
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // 결과 메시지
+        Text(
+            text = "출력 완료!", // "결제 완료!" -> "출력 완료!"
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "실물 티켓이 출력됩니다.\n티켓을 확인해주세요.", // 문구 수정
+            fontSize = 18.sp,
+            color = Color(0xFF4B5563), // gray-600
+            textAlign = TextAlign.Center,
+            lineHeight = 26.sp
+        )
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        // 하단 버튼 (결제 완료와 동일)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(onClick = onAgain, modifier = Modifier.height(52.dp)) { Text("다시 홈으로") }
+            KioskButton(onClick = onDone, modifier = Modifier.height(52.dp)) { Text("완료 (종료)") }
+        }
+    }
 }

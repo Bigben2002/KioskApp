@@ -31,7 +31,10 @@ import java.util.Locale
 // 1. 결제 방식 선택 화면
 // ------------------------------------------------------------
 @Composable
-fun PaymentMethodSelectScreen(onPaid: () -> Unit, onBack: () -> Unit) {
+fun PaymentMethodSelectScreen(
+    onPaid: (String) -> Unit, // ✅ [요청 1] 선택된 메소드(String)를 받도록 수정
+    onBack: () -> Unit
+) {
     var method by remember { mutableStateOf<String?>(null) }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
@@ -48,7 +51,8 @@ fun PaymentMethodSelectScreen(onPaid: () -> Unit, onBack: () -> Unit) {
         Spacer(Modifier.weight(1f))
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f).height(56.dp)) { Text("이전") }
-            KioskButton(onClick = onPaid, enabled = method != null, modifier = Modifier.weight(1f).height(56.dp)) { Text("결제 완료") }
+            // ✅ [요청 1] onClick 시 선택된 method를 onPaid 콜백에 전달
+            KioskButton(onClick = { onPaid(method!!) }, enabled = method != null, modifier = Modifier.weight(1f).height(56.dp)) { Text("결제 완료") }
         }
     }
 }
@@ -98,6 +102,33 @@ fun PaymentCardInsertScreen() {
         )
     }
 }
+
+// ------------------------------------------------------------
+// ✅ [요청 1] 'QR 스캔' 안내 화면 (신규 추가)
+// ------------------------------------------------------------
+@Composable
+fun PaymentQrScanScreen() {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.QrCodeScanner,
+            contentDescription = null,
+            modifier = Modifier.size(128.dp),
+            tint = Color(0xFF374151)
+        )
+        Spacer(Modifier.height(24.dp))
+        Text(
+            "QR코드를 QR코드 리더기에 맞춰주세요",
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
 
 // ------------------------------------------------------------
 // 3. '결제 중' 로딩 화면

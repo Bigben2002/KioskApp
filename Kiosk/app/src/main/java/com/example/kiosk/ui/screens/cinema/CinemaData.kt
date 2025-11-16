@@ -9,13 +9,13 @@ import androidx.compose.runtime.remember
 // ------------------------------------------------------------
 
 // 영화 예매 메인 단계
-enum class CinemaStage { HOME, BOOKING, SEAT, PAYMENT, SNACK }
+enum class CinemaStage { HOME, BOOKING, SEAT, PAYMENT, SNACK, PRINT }
 
 // 예매 세부 단계
 enum class BookingStep { MOVIE, TIME, THEATER_PEOPLE }
 
 // (공통) 결제 세부 단계
-enum class PaymentStep { METHOD_SELECT, CARD_INSERT, PROCESSING, SUCCESS }
+enum class PaymentStep { METHOD_SELECT, CARD_INSERT, QR_SCAN, PROCESSING, SUCCESS }
 
 // 음식 주문 메인 단계
 enum class FoodStep { MENU, PAYMENT }
@@ -66,17 +66,14 @@ fun rememberMovies(): List<MovieItem> = remember {
 @Composable
 fun rememberTheaters(): List<TheaterOption> = remember {
     listOf(
-        // ✅ [요청 1] 잔여 좌석 수 수정 ( 120 - 40 = 80 )
         TheaterOption("t1", "1관 2D",   120, 80),
-        // ✅ [요청 1] 잔여 좌석 수 수정 ( 96 - 10 = 86 )
         TheaterOption("t2", "2관 4DX",   96, 86),
-        // ✅ [요청 1] 잔여 좌석 수 수정 ( 84 - 51 = 33 )
         TheaterOption("t3", "3관 IMAX",  84, 33)
     )
 }
 
 /**
- * ✅ [요청 1] 상영관 ID별로 미리 예매된 좌석 Set을 생성합니다.
+ * 상영관 ID별로 미리 예매된 좌석 Set을 생성합니다.
  */
 @Composable
 fun rememberReservedSeats(theaterId: String?): Set<String> = remember(theaterId) {
@@ -113,4 +110,73 @@ fun rememberReservedSeats(theaterId: String?): Set<String> = remember(theaterId)
         // 그 외
         else -> emptySet()
     }
+}
+
+
+// ------------------------------------------------------------
+// ✅ [요청] 예매 티켓 출력용 더미 데이터 (신규 추가)
+// ------------------------------------------------------------
+
+/**
+ * 예매된 티켓 정보 모델
+ */
+data class BookedTicket(
+    val bookingNumber: String, // 예매 번호 (12자리)
+    val movieId: String,
+    val theaterId: String,
+    val time: String,
+    val seats: List<String>,
+    val adultCount: Int,
+    val childCount: Int,
+    val seniorCount: Int
+) {
+    val totalPeople: Int get() = adultCount + childCount + seniorCount
+}
+
+/**
+ * 미리 예매된 티켓 목록 (3개)
+ * (rememberReservedSeats 에 정의된 좌석을 기반으로 함)
+ */
+@Composable
+fun rememberBookedTickets(
+    movies: List<MovieItem> = rememberMovies(),
+    theaters: List<TheaterOption> = rememberTheaters()
+): Map<String, BookedTicket> = remember(movies, theaters) {
+    val ticketList = listOf(
+        // 티켓 1: 1관 (t1), C5, C6 (2명)
+        BookedTicket(
+            bookingNumber = "112233445566",
+            movieId = "m1", // 인사이드 아웃 2
+            theaterId = "t1", // 1관 2D
+            time = "10:30",
+            seats = listOf("C5", "C6"),
+            adultCount = 2,
+            childCount = 0,
+            seniorCount = 0
+        ),
+        // 티켓 2: 2관 (t2), J1, J2, J3 (3명)
+        BookedTicket(
+            bookingNumber = "998877665544",
+            movieId = "m2", // 범죄도시 4
+            theaterId = "t2", // 2관 4DX
+            time = "12:20",
+            seats = listOf("J1", "J2", "J3"),
+            adultCount = 1,
+            childCount = 2,
+            seniorCount = 0
+        ),
+        // 티켓 3: 3관 (t3), A1 (1명)
+        BookedTicket(
+            bookingNumber = "123456789012",
+            movieId = "m3", // 듄: 파트2
+            theaterId = "t3", // 3관 IMAX
+            time = "11:10",
+            seats = listOf("A1"),
+            adultCount = 1,
+            childCount = 0,
+            seniorCount = 0
+        )
+    )
+    // 조회를 쉽게 하기 위해 Map<String, BookedTicket> 형태로 변환
+    ticketList.associateBy { it.bookingNumber }
 }

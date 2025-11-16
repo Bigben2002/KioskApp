@@ -58,7 +58,6 @@ fun CinemaFlowRoot(
     var selectedSeats by remember { mutableStateOf<Set<String>>(emptySet()) }
     var showTimetableDialog by remember { mutableStateOf(false) }
 
-    // ✅ [요청 2] 좌석 선택 안내 팝업 상태 추가
     var showSeatInstructionPopup by remember { mutableStateOf(false) }
 
     // 결제 단계
@@ -105,7 +104,7 @@ fun CinemaFlowRoot(
         seniorCount = 0
         selectedSeats = emptySet()
         paymentStep = PaymentStep.METHOD_SELECT
-        showSeatInstructionPopup = false // ✅ [요청 2] 팝업 상태도 초기화
+        showSeatInstructionPopup = false
     }
 
     Scaffold(
@@ -135,9 +134,9 @@ fun CinemaFlowRoot(
                 // --- 1. 홈 ---
                 CinemaStage.HOME -> {
                     PracticeBanner("수행할 작업을 선택해주세요 (예: 티켓 구매)")
-                    CinemaHome(
+                    CinemaHomeScreen( // ✅ CinemaHome -> CinemaHomeScreen 으로 변경
                         onTicket = { stage = CinemaStage.BOOKING },
-                        onPrint  = {},
+                        onPrint  = { stage = CinemaStage.PRINT }, // ✅ [요청 2] PRINT 스크린으로 이동
                         onRefund = {},
                         onSnack  = { stage = CinemaStage.SNACK }
                     )
@@ -186,10 +185,9 @@ fun CinemaFlowRoot(
                             onSeniorInc = { if (totalPeopleCount < 8) seniorCount++ },
                             onSeniorDec = { if (seniorCount > 0) seniorCount-- },
 
-                            // ✅ [요청 2] 팝업을 띄우도록 onNextToSeat 수정
                             onNextToSeat = {
                                 stage = CinemaStage.SEAT
-                                showSeatInstructionPopup = true // 팝업 띄우기
+                                showSeatInstructionPopup = true
                             },
                             onBack = { stage = CinemaStage.HOME },
                             onShowTimetable = { showTimetableDialog = true },
@@ -209,13 +207,12 @@ fun CinemaFlowRoot(
                 CinemaStage.SEAT -> {
                     PracticeBanner("선택한 인원 수(${totalPeopleCount}명)만큼 좌석을 선택해주세요")
 
-                    // ✅ [요청 1] 상영관 ID에 맞는 예약 좌석을 가져옴
                     val reservedSeats = rememberReservedSeats(selectedTheater?.id)
 
                     SeatSelectScreen(
                         peopleCount = totalPeopleCount,
                         selectedSeats = selectedSeats,
-                        reservedSeats = reservedSeats, // 예약 좌석 전달
+                        reservedSeats = reservedSeats,
                         onToggleSeat = { seat ->
                             selectedSeats = if (selectedSeats.contains(seat)) {
                                 selectedSeats - seat
@@ -227,7 +224,6 @@ fun CinemaFlowRoot(
                         onBack = { stage = CinemaStage.BOOKING }
                     )
 
-                    // ✅ [요청 2] 팝업 띄우는 로직 추가
                     if (showSeatInstructionPopup) {
                         SeatInstructionDialog(
                             onDismiss = { showSeatInstructionPopup = false }
@@ -241,7 +237,14 @@ fun CinemaFlowRoot(
                         PaymentStep.METHOD_SELECT -> {
                             PracticeBanner("결제 방식을 선택하세요 (예: 카드 결제)")
                             PaymentMethodSelectScreen(
-                                onPaid = { paymentStep = PaymentStep.CARD_INSERT },
+                                // ✅ [요청 1] 선택된 method에 따라 분기
+                                onPaid = { method ->
+                                    if (method == "CARD") {
+                                        paymentStep = PaymentStep.CARD_INSERT
+                                    } else if (method == "QR") {
+                                        paymentStep = PaymentStep.QR_SCAN
+                                    }
+                                },
                                 onBack = { stage = CinemaStage.SEAT }
                             )
                         }
@@ -250,6 +253,15 @@ fun CinemaFlowRoot(
                             PaymentCardInsertScreen()
                             LaunchedEffect(Unit) {
                                 delay(2000)
+                                paymentStep = PaymentStep.PROCESSING
+                            }
+                        }
+                        // ✅ [요청 1] QR 스캔 단계 추가
+                        PaymentStep.QR_SCAN -> {
+                            PracticeBanner("화면의 안내에 따라 QR코드를 스캔해주세요")
+                            PaymentQrScanScreen()
+                            LaunchedEffect(Unit) {
+                                delay(2000) // QR 스캔 대기 시간
                                 paymentStep = PaymentStep.PROCESSING
                             }
                         }
@@ -286,6 +298,14 @@ fun CinemaFlowRoot(
                     CinemaFoodScreen(
                         modifier = Modifier.fillMaxSize(),
                         onClose = { stage = CinemaStage.HOME }
+                    )
+                }
+
+                // ✅ [요청 2] 티켓 출력 단계 추가
+                CinemaStage.PRINT -> {
+                    PracticeBanner("예매하신 티켓의 QR/예매번호를 입력해주세요")
+                    PrintTicketScreen(
+                        onBack = { resetFlow() }
                     )
                 }
             }

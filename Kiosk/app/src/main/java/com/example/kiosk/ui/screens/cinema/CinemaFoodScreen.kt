@@ -124,12 +124,27 @@ fun CinemaFoodScreen(
             when (paymentStep) {
                 PaymentStep.METHOD_SELECT -> {
                     PaymentMethodSelectScreen(
-                        onPaid = { paymentStep = PaymentStep.CARD_INSERT },
+                        // ✅ [요청 1] 선택된 method에 따라 분기
+                        onPaid = { method ->
+                            if (method == "CARD") {
+                                paymentStep = PaymentStep.CARD_INSERT
+                            } else if (method == "QR") {
+                                paymentStep = PaymentStep.QR_SCAN
+                            }
+                        },
                         onBack = { step = FoodStep.MENU }
                     )
                 }
                 PaymentStep.CARD_INSERT -> {
                     PaymentCardInsertScreen()
+                    LaunchedEffect(Unit) {
+                        delay(2000)
+                        paymentStep = PaymentStep.PROCESSING
+                    }
+                }
+                // ✅ [요청 1] QR 스캔 단계 추가
+                PaymentStep.QR_SCAN -> {
+                    PaymentQrScanScreen()
                     LaunchedEffect(Unit) {
                         delay(2000)
                         paymentStep = PaymentStep.PROCESSING

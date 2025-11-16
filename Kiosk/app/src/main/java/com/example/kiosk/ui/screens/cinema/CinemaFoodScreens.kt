@@ -142,7 +142,11 @@ private fun MenuCard(m: MenuItem, onAdd: () -> Unit) {
                     .height(90.dp)
                     .background(Color(0xFFF3F4F6), RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
-            ) { Text("🍿", fontSize = 28.sp) } // 텍스트 이모지
+            ) {
+                // ✅ [요청 3] '음료' 카테고리일 경우 🥤 아이콘, 그 외에는 🍿 아이콘 표시
+                val icon = if (m.category == "음료") "🥤" else "🍿"
+                Text(icon, fontSize = 28.sp)
+            }
 
             Spacer(Modifier.height(8.dp))
             Text(m.name, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
