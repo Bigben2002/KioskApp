@@ -1,4 +1,3 @@
-// app/src/main/java/com/example/kiosk/ui/screens/cinema/CinemaPaymentScreens.kt
 package com.example.kiosk.ui.screens.cinema
 
 import android.annotation.SuppressLint
@@ -7,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -28,11 +28,11 @@ import java.text.NumberFormat
 import java.util.Locale
 
 // ------------------------------------------------------------
-// 1. 결제 방식 선택 화면
+// 1. 결제 방식 선택 화면 (기존 유지)
 // ------------------------------------------------------------
 @Composable
 fun PaymentMethodSelectScreen(
-    onPaid: (String) -> Unit, // ✅ [요청 1] 선택된 메소드(String)를 받도록 수정
+    onPaid: (String) -> Unit,
     onBack: () -> Unit
 ) {
     var method by remember { mutableStateOf<String?>(null) }
@@ -51,7 +51,6 @@ fun PaymentMethodSelectScreen(
         Spacer(Modifier.weight(1f))
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f).height(56.dp)) { Text("이전") }
-            // ✅ [요청 1] onClick 시 선택된 method를 onPaid 콜백에 전달
             KioskButton(onClick = { onPaid(method!!) }, enabled = method != null, modifier = Modifier.weight(1f).height(56.dp)) { Text("결제 완료") }
         }
     }
@@ -79,7 +78,7 @@ private fun PaymentMethodCard(
 }
 
 // ------------------------------------------------------------
-// 2. '카드 삽입' 안내 화면
+// 2. '카드 삽입' 안내 화면 (기존 유지)
 // ------------------------------------------------------------
 @Composable
 fun PaymentCardInsertScreen() {
@@ -104,7 +103,7 @@ fun PaymentCardInsertScreen() {
 }
 
 // ------------------------------------------------------------
-// ✅ [요청 1] 'QR 스캔' 안내 화면 (신규 추가)
+// 'QR 스캔' 안내 화면 (기존 유지)
 // ------------------------------------------------------------
 @Composable
 fun PaymentQrScanScreen() {
@@ -131,7 +130,7 @@ fun PaymentQrScanScreen() {
 
 
 // ------------------------------------------------------------
-// 3. '결제 중' 로딩 화면
+// 3. '결제 중' 로딩 화면 (기존 유지)
 // ------------------------------------------------------------
 @Composable
 fun PaymentProcessingScreen() {
@@ -158,7 +157,7 @@ fun PaymentProcessingScreen() {
 
 
 // ------------------------------------------------------------
-// 4. '티켓 결제 완료' 영수증 화면
+// 4. '티켓 결제 완료' 영수증 화면 (연습 모드용 - 기존 유지)
 // ------------------------------------------------------------
 @SuppressLint("NewApi")
 @Composable
@@ -271,6 +270,138 @@ fun PaymentSuccessScreen_Ticket(
     }
 }
 
+// ------------------------------------------------------------
+// 미션 결과 영수증 화면 (실전 모드용)
+// ------------------------------------------------------------
+@SuppressLint("NewApi")
+@Composable
+fun MissionResultScreen_Ticket(
+    movie: MovieItem?,
+    time: String?,
+    theater: TheaterOption?,
+    seats: List<String>,
+    dateMillis: Long,
+    adultCount: Int,
+    childCount: Int,
+    seniorCount: Int,
+    totalPrice: Int,
+    missionResultText: String,
+    onDone: () -> Unit,
+    onAgain: () -> Unit
+) {
+    val dateText = remember(dateMillis) {
+        SimpleDateFormat("yyyy.MM.dd (E)", Locale.KOREA).format(dateMillis)
+    }
+    // 결과 텍스트를 기준으로 색상 결정
+    val themeColor = when {
+        missionResultText.contains("100%") -> Color(0xFF16A34A) // Green
+        missionResultText.contains("50%") -> Color(0xFFCA8A04) // Yellow (Amber)
+        else -> Color(0xFFDC2626) // Red
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // 결과 아이콘
+        Surface(
+            shape = CircleShape,
+            color = themeColor,
+            modifier = Modifier.size(100.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(64.dp))
+            }
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // 결과 메시지
+        Text(
+            text = "미션 결과: $missionResultText",
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Bold,
+            color = themeColor
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = when {
+                missionResultText.contains("100%") -> "모든 미션을 완벽하게 수행했습니다! 🎉"
+                missionResultText.contains("50%") -> "부분적으로 미션을 수행했습니다. 다시 도전해보세요!"
+                else -> "미션 수행에 실패했습니다. 다음 기회에 다시 시도해보세요."
+            },
+            fontSize = 18.sp,
+            color = Color(0xFF4B5563),
+            textAlign = TextAlign.Center,
+            lineHeight = 26.sp
+        )
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        // 영수증 카드
+        KioskCard(
+            backgroundColor = Color(0xFFF9FAFB),
+            borderColor = Color(0xFFE5E7EB),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text("주문 내역", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
+
+                ReceiptRow(label = "영화", value = movie?.title ?: "-")
+                ReceiptRow(label = "일시", value = "$dateText ${time ?: "-"}")
+                ReceiptRow(label = "상영관", value = theater?.name ?: "-")
+
+                val peopleDetail = mutableListOf<String>()
+                if (adultCount > 0) peopleDetail.add("성인 ${adultCount}명")
+                if (childCount > 0) peopleDetail.add("아이 ${childCount}명")
+                if (seniorCount > 0) peopleDetail.add("우대 ${seniorCount}명")
+                ReceiptRow(label = "인원", value = peopleDetail.joinToString(", ").ifEmpty { "-" })
+
+                ReceiptRow(label = "좌석", value = if (seats.isEmpty()) "-" else seats.joinToString(", "))
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("총 금액", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "${NumberFormat.getNumberInstance(Locale.KOREA).format(totalPrice)}원",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = themeColor
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // 하단 버튼
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(onClick = onAgain, modifier = Modifier.height(52.dp)) { Text("다시 도전") }
+
+            // ✅ 오류 수정: KioskButton 대신 Material3 Button을 사용하여 colors 인자 전달
+            Button(
+                onClick = onDone,
+                modifier = Modifier.height(52.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = themeColor), // 동적 색상 적용
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("완료 (종료)")
+            }
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
 // 영수증 행 (공통)
 @Composable
 fun ReceiptRow(label: String, value: String) {
@@ -282,13 +413,13 @@ fun ReceiptRow(label: String, value: String) {
         Text(
             text = label,
             fontSize = 16.sp,
-            color = Color(0xFF6B7280), // gray-500
-            modifier = Modifier.widthIn(min = 60.dp) // 라벨 너비 확보
+            color = Color(0xFF6B7280),
+            modifier = Modifier.widthIn(min = 60.dp)
         )
         Text(
             text = value,
             fontSize = 16.sp,
-            color = Color(0xFF1F2937), // gray-800
+            color = Color(0xFF1F2937),
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.End,
             modifier = Modifier.weight(1f)

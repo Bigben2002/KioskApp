@@ -1,4 +1,3 @@
-// app/src/main/java/com/example/kiosk/ui/screens/cinema/CinemaFoodScreen.kt
 package com.example.kiosk.ui.screens.cinema
 
 import androidx.compose.foundation.layout.fillMaxSize
@@ -7,12 +6,18 @@ import androidx.compose.ui.Modifier
 import com.example.kiosk.data.model.CartItem
 import com.example.kiosk.data.model.ItemOption
 import com.example.kiosk.data.model.MenuItem
-import kotlinx.coroutines.delay // ✅ 'delay' 임포트 추가
+import com.example.kiosk.data.model.RequiredItem
+import kotlinx.coroutines.delay
 
 @Composable
 fun CinemaFoodScreen(
     modifier: Modifier = Modifier,
-    onClose: (() -> Unit)? = null
+    onClose: (() -> Unit)? = null,
+    // KioskViewModel 없이 독립적으로 작동
+    foodCartState: List<CartItem> = emptyList(),
+    onCartUpdate: (List<CartItem>) -> Unit = {},
+    onPaymentSuccess: () -> Unit = {},
+    missionRequiredFood: List<RequiredItem> = emptyList() // 미션은 없지만 UI는 유지
 ) {
     val categories = listOf("스낵", "음료", "세트")
     var selectedCategory by remember { mutableStateOf(categories.first()) }
@@ -23,7 +28,7 @@ fun CinemaFoodScreen(
             MenuItem("sn2", "팝콘(M)", 5500, "스낵"),
             MenuItem("sn3", "팝콘(L)", 7000, "스낵"),
             MenuItem("sn4", "나쵸", 5000, "스낵"),
-            MenuItem("sn5", "핫도그", 4500, "스낵"),
+            MenuItem("sn5", "핫도그", 4500, "스낵"), // 🌭
             MenuItem("dr1", "콜라(S)", 2500, "음료"),
             MenuItem("dr2", "콜라(M)", 3000, "음료"),
             MenuItem("dr3", "제로콜라", 3000, "음료"),
@@ -35,11 +40,13 @@ fun CinemaFoodScreen(
     }
 
     val filtered = remember(selectedCategory) {
-        val f = allItems.filter { it.category == selectedCategory }
-        if (f.isEmpty()) allItems else f
+        allItems.filter { it.category == selectedCategory }
     }
 
-    var cart by remember { mutableStateOf<List<CartItem>>(emptyList()) }
+    // 내부 상태를 관리하며 외부로 상태를 전달 (독립적인 작동)
+    var cart by remember { mutableStateOf(if (onCartUpdate == {}) foodCartState else emptyList()) }
+    LaunchedEffect(foodCartState) { if (onCartUpdate != {}) cart = foodCartState }
+
     var showCartDialog by remember { mutableStateOf(false) }
 
     // --- 결제 단계 상태 ---
@@ -47,17 +54,10 @@ fun CinemaFoodScreen(
     var paymentStep by remember { mutableStateOf(PaymentStep.METHOD_SELECT) }
 
     val totalPrice by derivedStateOf {
-        var sum = 0
-        for (c in cart) {
-            sum += c.menuItem.price * c.quantity
-            if (c.selectedOption != null) sum += c.selectedOption!!.price * c.quantity
-        }
-        sum
+        cart.sumOf { (it.menuItem.price + (it.selectedOption?.price ?: 0)) * it.quantity }
     }
     val totalCount by derivedStateOf {
-        var cnt = 0
-        for (c in cart) cnt += c.quantity
-        cnt
+        cart.sumOf { it.quantity }
     }
 
     // --- 카트 조작 함수 ---
@@ -72,11 +72,13 @@ fun CinemaFoodScreen(
         }
         if (!found) list.add(CartItem(item, 1, null))
         cart = list
+        onCartUpdate(list)
     }
     val onInc = { idx: Int ->
         val list = cart.toMutableList()
         if (idx in list.indices) list[idx] = list[idx].copy(quantity = list[idx].quantity + 1)
         cart = list
+        onCartUpdate(list)
     }
     val onDec = { idx: Int ->
         val list = cart.toMutableList()
@@ -85,8 +87,12 @@ fun CinemaFoodScreen(
             if (q <= 0) list.removeAt(idx) else list[idx] = list[idx].copy(quantity = q)
         }
         cart = list
+        onCartUpdate(list)
     }
-    val onClear = { cart = emptyList() }
+    val onClear = {
+        cart = emptyList()
+        onCartUpdate(emptyList())
+    }
     // --- ---
 
     // --- 화면 분기 (State Machine) ---
@@ -101,6 +107,7 @@ fun CinemaFoodScreen(
                 totalCount = totalCount,
                 totalPrice = totalPrice,
                 onShowCart = { showCartDialog = true },
+                missionRequiredFood = missionRequiredFood,
                 modifier = modifier
             )
 
@@ -124,31 +131,20 @@ fun CinemaFoodScreen(
             when (paymentStep) {
                 PaymentStep.METHOD_SELECT -> {
                     PaymentMethodSelectScreen(
-                        // ✅ [요청 1] 선택된 method에 따라 분기
                         onPaid = { method ->
-                            if (method == "CARD") {
-                                paymentStep = PaymentStep.CARD_INSERT
-                            } else if (method == "QR") {
-                                paymentStep = PaymentStep.QR_SCAN
-                            }
+                            if (method == "CARD") paymentStep = PaymentStep.CARD_INSERT
+                            else if (method == "QR") paymentStep = PaymentStep.QR_SCAN
                         },
                         onBack = { step = FoodStep.MENU }
                     )
                 }
                 PaymentStep.CARD_INSERT -> {
                     PaymentCardInsertScreen()
-                    LaunchedEffect(Unit) {
-                        delay(2000)
-                        paymentStep = PaymentStep.PROCESSING
-                    }
+                    LaunchedEffect(Unit) { delay(2000); paymentStep = PaymentStep.PROCESSING }
                 }
-                // ✅ [요청 1] QR 스캔 단계 추가
                 PaymentStep.QR_SCAN -> {
                     PaymentQrScanScreen()
-                    LaunchedEffect(Unit) {
-                        delay(2000)
-                        paymentStep = PaymentStep.PROCESSING
-                    }
+                    LaunchedEffect(Unit) { delay(2000); paymentStep = PaymentStep.PROCESSING }
                 }
                 PaymentStep.PROCESSING -> {
                     PaymentProcessingScreen()
@@ -163,12 +159,13 @@ fun CinemaFoodScreen(
                         totalPrice = totalPrice,
                         onDone = {
                             onClose?.invoke()
-                            cart = emptyList()
+                            onCartUpdate(emptyList())
                             paymentStep = PaymentStep.METHOD_SELECT
                             step = FoodStep.MENU
                         },
                         onAgain = {
-                            cart = emptyList()
+                            onClose?.invoke()
+                            onCartUpdate(emptyList())
                             paymentStep = PaymentStep.METHOD_SELECT
                             step = FoodStep.MENU
                         }

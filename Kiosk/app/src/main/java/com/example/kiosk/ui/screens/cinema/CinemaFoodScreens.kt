@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.kiosk.data.model.CartItem
 import com.example.kiosk.data.model.MenuItem
+import com.example.kiosk.data.model.RequiredItem
 import com.example.kiosk.ui.components.ButtonVariant
 import com.example.kiosk.ui.components.KioskButton
 import com.example.kiosk.ui.components.KioskCard
@@ -60,7 +60,9 @@ fun FoodMenuScreen(
     totalCount: Int,
     totalPrice: Int,
     onShowCart: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // ✅ 미션 요구사항을 받아서 표시
+    missionRequiredFood: List<RequiredItem> = emptyList()
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -78,7 +80,7 @@ fun FoodMenuScreen(
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                             .shadow(2.dp, RoundedCornerShape(8.dp))
                     ) {
-                        Text("장바구니 보기 (${totalCount}개 · ${totalPrice}원)")
+                        Text("장바구니 보기 (${totalCount}개 · ${NumberFormat.getNumberInstance(Locale.KOREA).format(totalPrice)}원)")
                     }
                 }
             }
@@ -88,10 +90,22 @@ fun FoodMenuScreen(
             modifier = Modifier
                 .padding(paddingValues)
                 .fillMaxSize()
-                .padding(16.dp)
         ) {
+            // ✅ 미션 가이드 추가
+            if (missionRequiredFood.isNotEmpty()) {
+                val reqText = missionRequiredFood.joinToString(", ") { "${it.name} ${it.quantity}개" }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFFEF9C3)) // yellow-100
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text("✅ 미션: $reqText", fontSize = 14.sp, color = Color(0xFF854D0E))
+                }
+            }
+
             // 상단 카테고리 칩
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(16.dp)) {
                 for (i in 0 until categories.size) {
                     val cat = categories[i]
                     val selected = cat == selectedCategory
@@ -111,10 +125,8 @@ fun FoodMenuScreen(
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-
             // 메뉴 그리드
-            KioskCard(modifier = Modifier.fillMaxSize()) {
+            KioskCard(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
                 Column(Modifier.padding(12.dp)) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(3),
@@ -143,14 +155,20 @@ private fun MenuCard(m: MenuItem, onAdd: () -> Unit) {
                     .background(Color(0xFFF3F4F6), RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                // ✅ [요청 3] '음료' 카테고리일 경우 🥤 아이콘, 그 외에는 🍿 아이콘 표시
-                val icon = if (m.category == "음료") "🥤" else "🍿"
+                // ✅ 이미지 분기 로직 수정
+                val icon = when {
+                    m.category == "음료" -> "🥤"
+                    m.name.contains("핫도그") -> "🌭" // 핫도그 이미지 추가
+                    m.name.contains("팝콘") -> "🍿"
+                    m.name.contains("나쵸") -> "🧀"
+                    else -> "🍿"
+                }
                 Text(icon, fontSize = 28.sp)
             }
 
             Spacer(Modifier.height(8.dp))
             Text(m.name, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("${m.price}원", fontSize = 12.sp, color = Color(0xFF6B7280))
+            Text("${NumberFormat.getNumberInstance(Locale.KOREA).format(m.price)}원", fontSize = 12.sp, color = Color(0xFF6B7280))
             Spacer(Modifier.height(8.dp))
             KioskButton(onClick = onAdd, modifier = Modifier.fillMaxWidth()) { Text("담기") }
         }
@@ -158,7 +176,7 @@ private fun MenuCard(m: MenuItem, onAdd: () -> Unit) {
 }
 
 // ------------------------------------------------------------
-// 음식 결제 완료 영수증 화면
+// 음식 결제 완료 영수증 화면 (기존 유지)
 // ------------------------------------------------------------
 @Composable
 fun FoodPaymentSuccessScreen(
@@ -228,7 +246,8 @@ fun FoodPaymentSuccessScreen(
                 // --- 항목 ---
                 cart.forEach { item ->
                     val itemPrice = (item.menuItem.price + (item.selectedOption?.price ?: 0)) * item.quantity
-                    ReceiptRow( // CinemaPaymentScreens.kt 에 있는 ReceiptRow 재사용
+                    // CinemaPaymentScreens.kt 에 있는 ReceiptRow 재사용
+                    ReceiptRow(
                         label = "${item.menuItem.name} x${item.quantity}",
                         value = "${NumberFormat.getNumberInstance(Locale.KOREA).format(itemPrice)}원"
                     )

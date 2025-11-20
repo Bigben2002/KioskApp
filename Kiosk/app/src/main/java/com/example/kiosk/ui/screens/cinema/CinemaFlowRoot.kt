@@ -1,4 +1,3 @@
-// app/src/main/java/com/example/kiosk/ui/screens/cinema/CinemaFlowRoot.kt
 package com.example.kiosk.ui.screens.cinema
 
 import androidx.compose.foundation.background
@@ -18,9 +17,9 @@ import androidx.compose.material3.SmallTopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -30,8 +29,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
-import kotlin.math.min
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,9 +38,12 @@ fun CinemaFlowRoot(
     isPracticeMode: Boolean,
     onExit: () -> Unit
 ) {
-    // --- 상태 관리 ---
+    // --- 상태 관리 (KioskViewModel 역할 흡수) ---
     var stage by remember { mutableStateOf(CinemaStage.HOME) }
     var bookingStep by remember { mutableStateOf(BookingStep.MOVIE) }
+
+    // 연습 모드 상태 (PracticeStep)
+    var practiceStep by remember { mutableIntStateOf(1) }
     var practiceStarted by remember { mutableStateOf(!isPracticeMode) }
 
     val todayMillis = remember { System.currentTimeMillis() }
@@ -50,9 +52,9 @@ fun CinemaFlowRoot(
     var selectedTime by remember { mutableStateOf<String?>(null) }
     var selectedTheater by remember { mutableStateOf<TheaterOption?>(null) }
 
-    var adultCount by remember { mutableStateOf(0) }
-    var childCount by remember { mutableStateOf(0) }
-    var seniorCount by remember { mutableStateOf(0) }
+    var adultCount by remember { mutableIntStateOf(0) }
+    var childCount by remember { mutableIntStateOf(0) }
+    var seniorCount by remember { mutableIntStateOf(0) }
     val totalPeopleCount by derivedStateOf { adultCount + childCount + seniorCount }
 
     var selectedSeats by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -63,6 +65,7 @@ fun CinemaFlowRoot(
     // 결제 단계
     var paymentStep by remember { mutableStateOf(PaymentStep.METHOD_SELECT) }
 
+    // 가격 계산 (로직 유지)
     val totalPrice by derivedStateOf {
         val fullPrice = when {
             selectedTheater?.name?.contains("4DX") == true -> 16000
@@ -105,7 +108,13 @@ fun CinemaFlowRoot(
         selectedSeats = emptySet()
         paymentStep = PaymentStep.METHOD_SELECT
         showSeatInstructionPopup = false
+        practiceStep = 1 // 연습 모드 재시작
     }
+
+    // 연습 모드 단계 관리 함수 (KioskViewModel의 startPractice, selectCategory 역할 흡수)
+    fun startPractice() { practiceStarted = true }
+    fun nextPracticeStep() { practiceStep++ }
+
 
     Scaffold(
         topBar = {
@@ -134,9 +143,9 @@ fun CinemaFlowRoot(
                 // --- 1. 홈 ---
                 CinemaStage.HOME -> {
                     PracticeBanner("수행할 작업을 선택해주세요 (예: 티켓 구매)")
-                    CinemaHomeScreen( // ✅ CinemaHome -> CinemaHomeScreen 으로 변경
+                    CinemaHomeScreen(
                         onTicket = { stage = CinemaStage.BOOKING },
-                        onPrint  = { stage = CinemaStage.PRINT }, // ✅ [요청 2] PRINT 스크린으로 이동
+                        onPrint  = { stage = CinemaStage.PRINT },
                         onRefund = {},
                         onSnack  = { stage = CinemaStage.SNACK }
                     )
@@ -145,19 +154,22 @@ fun CinemaFlowRoot(
                 // --- 2. 예매 ---
                 CinemaStage.BOOKING -> {
                     if (isPracticeMode && !practiceStarted) {
-                        PracticeBanner("영화 예매 연습을 시작합니다")
-                        PracticeWelcomeScreen(onStart = { practiceStarted = true })
+                        PracticeBanner("영화 예매 연습을 시작합니다 (1/4)")
+                        PracticeWelcomeScreen(onStart = { startPractice() })
                     } else {
                         val bannerText = when (bookingStep) {
-                            BookingStep.MOVIE -> "관람을 원하시는 영화를 선택해주세요"
-                            BookingStep.TIME -> "관람하실 시간을 선택해주세요"
-                            BookingStep.THEATER_PEOPLE -> "관람하실 상영관과 인원을 선택해주세요"
+                            BookingStep.MOVIE -> "관람을 원하시는 영화를 선택해주세요 (1/4)"
+                            BookingStep.TIME -> "관람하실 시간을 선택해주세요 (2/4)"
+                            BookingStep.THEATER_PEOPLE -> "관람하실 상영관과 인원을 선택해주세요 (3/4)"
                         }
                         PracticeBanner(bannerText)
 
                         BookingScreen(
                             bookingStep = bookingStep,
-                            onChangeStep = { bookingStep = it },
+                            onChangeStep = { newStep ->
+                                bookingStep = newStep
+                                if (isPracticeMode) nextPracticeStep() // 단계가 바뀌면 연습 스텝도 증가
+                            },
                             bookingDateMillis = bookingDateMillis,
                             onChangeDate = { bookingDateMillis = it },
                             movies = rememberMovies(),
@@ -168,6 +180,7 @@ fun CinemaFlowRoot(
                                 selectedTime = null
                                 selectedTheater = null
                                 bookingStep = BookingStep.TIME
+                                if (isPracticeMode) nextPracticeStep()
                             },
                             selectedTime = selectedTime,
                             onSelectTime = { selectedTime = it },
@@ -188,6 +201,7 @@ fun CinemaFlowRoot(
                             onNextToSeat = {
                                 stage = CinemaStage.SEAT
                                 showSeatInstructionPopup = true
+                                if (isPracticeMode) nextPracticeStep() // 4/4 단계
                             },
                             onBack = { stage = CinemaStage.HOME },
                             onShowTimetable = { showTimetableDialog = true },
@@ -205,7 +219,7 @@ fun CinemaFlowRoot(
 
                 // --- 3. 좌석 선택 ---
                 CinemaStage.SEAT -> {
-                    PracticeBanner("선택한 인원 수(${totalPeopleCount}명)만큼 좌석을 선택해주세요")
+                    PracticeBanner("선택한 인원 수(${totalPeopleCount}명)만큼 좌석을 선택해주세요 (4/4)")
 
                     val reservedSeats = rememberReservedSeats(selectedTheater?.id)
 
@@ -220,7 +234,11 @@ fun CinemaFlowRoot(
                                 if (selectedSeats.size < totalPeopleCount) selectedSeats + seat else selectedSeats
                             }
                         },
-                        onNext = { stage = CinemaStage.PAYMENT },
+                        onNext = {
+                            // ✅ 수정된 부분: 결제 단계로 이동
+                            stage = CinemaStage.PAYMENT
+                            // ❌ 이전: if (isPracticeMode) resetFlow() // 연습 모드는 여기서 완료 (잘못된 로직)
+                        },
                         onBack = { stage = CinemaStage.BOOKING }
                     )
 
@@ -235,9 +253,8 @@ fun CinemaFlowRoot(
                 CinemaStage.PAYMENT -> {
                     when (paymentStep) {
                         PaymentStep.METHOD_SELECT -> {
-                            PracticeBanner("결제 방식을 선택하세요 (예: 카드 결제)")
+                            PracticeBanner("결제 방식을 선택하세요")
                             PaymentMethodSelectScreen(
-                                // ✅ [요청 1] 선택된 method에 따라 분기
                                 onPaid = { method ->
                                     if (method == "CARD") {
                                         paymentStep = PaymentStep.CARD_INSERT
@@ -256,12 +273,11 @@ fun CinemaFlowRoot(
                                 paymentStep = PaymentStep.PROCESSING
                             }
                         }
-                        // ✅ [요청 1] QR 스캔 단계 추가
                         PaymentStep.QR_SCAN -> {
                             PracticeBanner("화면의 안내에 따라 QR코드를 스캔해주세요")
                             PaymentQrScanScreen()
                             LaunchedEffect(Unit) {
-                                delay(2000) // QR 스캔 대기 시간
+                                delay(2000)
                                 paymentStep = PaymentStep.PROCESSING
                             }
                         }
@@ -274,7 +290,8 @@ fun CinemaFlowRoot(
                             }
                         }
                         PaymentStep.SUCCESS -> {
-                            PracticeBanner("결제가 완료되었습니다!")
+                            PracticeBanner("결제가 완료되었습니다! 연습 끝!")
+                            // ✅ 수정된 부분: 결제 완료 후 최종적으로 resetFlow() 호출
                             PaymentSuccessScreen_Ticket(
                                 movie = selectedMovie,
                                 time = selectedTime,
@@ -286,7 +303,7 @@ fun CinemaFlowRoot(
                                 seniorCount = seniorCount,
                                 totalPrice = totalPrice,
                                 onDone = onExit,
-                                onAgain = { resetFlow() }
+                                onAgain = { resetFlow() } // 홈으로 돌아가기
                             )
                         }
                     }
@@ -295,15 +312,17 @@ fun CinemaFlowRoot(
                 // --- 5. 스낵 ---
                 CinemaStage.SNACK -> {
                     PracticeBanner("주문할 스낵이나 음료를 선택해주세요")
+                    // KioskViewModel 없이 독립적으로 작동
                     CinemaFoodScreen(
                         modifier = Modifier.fillMaxSize(),
                         onClose = { stage = CinemaStage.HOME }
                     )
                 }
 
-                // ✅ [요청 2] 티켓 출력 단계 추가
+                // --- 6. 티켓 출력 ---
                 CinemaStage.PRINT -> {
                     PracticeBanner("예매하신 티켓의 QR/예매번호를 입력해주세요")
+                    // KioskViewModel 없이 독립적으로 작동
                     PrintTicketScreen(
                         onBack = { resetFlow() }
                     )

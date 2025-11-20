@@ -1,27 +1,19 @@
-// app/src/main/java/com/example/kiosk/ui/screens/cinema/CinemaData.kt
 package com.example.kiosk.ui.screens.cinema
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.example.kiosk.data.model.RequiredItem
 
 // ------------------------------------------------------------
-// 스텝 정의
+// 스텝 정의 (기존 유지)
 // ------------------------------------------------------------
-
-// 영화 예매 메인 단계
 enum class CinemaStage { HOME, BOOKING, SEAT, PAYMENT, SNACK, PRINT }
-
-// 예매 세부 단계
 enum class BookingStep { MOVIE, TIME, THEATER_PEOPLE }
-
-// (공통) 결제 세부 단계
 enum class PaymentStep { METHOD_SELECT, CARD_INSERT, QR_SCAN, PROCESSING, SUCCESS }
-
-// 음식 주문 메인 단계
 enum class FoodStep { MENU, PAYMENT }
 
 // ------------------------------------------------------------
-// 데이터 모델
+// 데이터 모델 (기존 유지)
 // ------------------------------------------------------------
 data class MovieItem(
     val id: String,
@@ -38,13 +30,34 @@ data class TheaterOption(
     val remainingSeats: Int
 )
 
-// ------------------------------------------------------------
-// 더미 데이터
-// ------------------------------------------------------------
+data class RequiredTicketMission(
+    val id: Int,
+    val title: String, // 미션 제목
+    val requiredMovieId: String,
+    val requiredTime: String,
+    val requiredTheaterId: String,
+    val requiredAdult: Int,
+    val requiredChild: Int,
+    val requiredSenior: Int,
+    val requiredFood: List<RequiredItem> // 음식 미션 (모두 제거됨)
+)
 
-/**
- * 영화 목록 (9개)
- */
+data class BookedTicket(
+    val bookingNumber: String,
+    val movieId: String,
+    val theaterId: String,
+    val time: String,
+    val seats: List<String>,
+    val adultCount: Int,
+    val childCount: Int,
+    val seniorCount: Int
+) {
+    val totalPeople: Int get() = adultCount + childCount + seniorCount
+}
+
+// ------------------------------------------------------------
+// 더미 데이터 (기존 유지)
+// ------------------------------------------------------------
 @Composable
 fun rememberMovies(): List<MovieItem> = remember {
     listOf(
@@ -60,9 +73,6 @@ fun rememberMovies(): List<MovieItem> = remember {
     )
 }
 
-/**
- * 상영관 목록
- */
 @Composable
 fun rememberTheaters(): List<TheaterOption> = remember {
     listOf(
@@ -72,111 +82,111 @@ fun rememberTheaters(): List<TheaterOption> = remember {
     )
 }
 
-/**
- * 상영관 ID별로 미리 예매된 좌석 Set을 생성합니다.
- */
 @Composable
 fun rememberReservedSeats(theaterId: String?): Set<String> = remember(theaterId) {
     when (theaterId) {
-        // "1관 2D" (40석 예매됨)
         "t1" -> {
-            // A, B, C열 전체 (12 * 3 = 36) + D열 4개
             val seats = mutableSetOf<String>()
             for (row in 'A'..'C') {
                 for (col in 1..12) {
                     seats.add("$row$col")
                 }
             }
-            for (col in 1..4) { seats.add("D$col") } // 40개
+            for (col in 1..4) { seats.add("D$col") }
             seats
         }
-        // "2관 4DX" (10석 예매됨)
         "t2" -> {
-            // J열 1~10번
-            (1..10).map { "J$it" }.toSet() // 10개
+            (1..10).map { "J$it" }.toSet()
         }
-        // "3관 IMAX" (51석 예매됨)
         "t3" -> {
-            // A, B, C, D열 전체 (12 * 4 = 48) + E열 3개
             val seats = mutableSetOf<String>()
             for (row in 'A'..'D') {
                 for (col in 1..12) {
                     seats.add("$row$col")
                 }
             }
-            for (col in 1..3) { seats.add("E$col") } // 51개
+            for (col in 1..3) { seats.add("E$col") }
             seats
         }
-        // 그 외
         else -> emptySet()
     }
 }
 
-
-// ------------------------------------------------------------
-// ✅ [요청] 예매 티켓 출력용 더미 데이터 (신규 추가)
-// ------------------------------------------------------------
-
-/**
- * 예매된 티켓 정보 모델
- */
-data class BookedTicket(
-    val bookingNumber: String, // 예매 번호 (12자리)
-    val movieId: String,
-    val theaterId: String,
-    val time: String,
-    val seats: List<String>,
-    val adultCount: Int,
-    val childCount: Int,
-    val seniorCount: Int
-) {
-    val totalPeople: Int get() = adultCount + childCount + seniorCount
-}
-
-/**
- * 미리 예매된 티켓 목록 (3개)
- * (rememberReservedSeats 에 정의된 좌석을 기반으로 함)
- */
 @Composable
 fun rememberBookedTickets(
     movies: List<MovieItem> = rememberMovies(),
     theaters: List<TheaterOption> = rememberTheaters()
 ): Map<String, BookedTicket> = remember(movies, theaters) {
     val ticketList = listOf(
-        // 티켓 1: 1관 (t1), C5, C6 (2명)
         BookedTicket(
-            bookingNumber = "112233445566",
-            movieId = "m1", // 인사이드 아웃 2
-            theaterId = "t1", // 1관 2D
-            time = "10:30",
-            seats = listOf("C5", "C6"),
-            adultCount = 2,
-            childCount = 0,
-            seniorCount = 0
+            bookingNumber = "112233445566", movieId = "m1", theaterId = "t1", time = "10:30",
+            seats = listOf("C5", "C6"), adultCount = 2, childCount = 0, seniorCount = 0
         ),
-        // 티켓 2: 2관 (t2), J1, J2, J3 (3명)
         BookedTicket(
-            bookingNumber = "998877665544",
-            movieId = "m2", // 범죄도시 4
-            theaterId = "t2", // 2관 4DX
-            time = "12:20",
-            seats = listOf("J1", "J2", "J3"),
-            adultCount = 1,
-            childCount = 2,
-            seniorCount = 0
+            bookingNumber = "998877665544", movieId = "m2", theaterId = "t2", time = "12:20",
+            seats = listOf("J1", "J2", "J3"), adultCount = 1, childCount = 2, seniorCount = 0
         ),
-        // 티켓 3: 3관 (t3), A1 (1명)
         BookedTicket(
-            bookingNumber = "123456789012",
-            movieId = "m3", // 듄: 파트2
-            theaterId = "t3", // 3관 IMAX
-            time = "11:10",
-            seats = listOf("A1"),
-            adultCount = 1,
-            childCount = 0,
-            seniorCount = 0
+            bookingNumber = "123456789012", movieId = "m3", theaterId = "t3", time = "11:10",
+            seats = listOf("A1"), adultCount = 1, childCount = 0, seniorCount = 0
         )
     )
-    // 조회를 쉽게 하기 위해 Map<String, BookedTicket> 형태로 변환
     ticketList.associateBy { it.bookingNumber }
+}
+
+/**
+ * ✅ 영화관 실전 모드 미션 목록 (음식 미션 요구사항 제거)
+ */
+@Composable
+fun rememberCinemaMissions(): List<RequiredTicketMission> = remember {
+    listOf(
+        // 미션 1: 티켓만 성공 (인사이드 아웃 2, 성인 2명, 1관)
+        RequiredTicketMission(
+            id = 1,
+            title = "오늘 10:30, 1관에서 '인사이드 아웃 2' 성인 2명의 티켓을 예매하세요.",
+            requiredMovieId = "m1",
+            requiredTime = "10:30",
+            requiredTheaterId = "t1",
+            requiredAdult = 2,
+            requiredChild = 0,
+            requiredSenior = 0,
+            requiredFood = emptyList() // ⬅️ 음식 요구사항 제거
+        ),
+        // 미션 2: 티켓만 성공 (범죄도시 4, 성인 1명, 아이 1명, 2관)
+        RequiredTicketMission(
+            id = 2,
+            title = "12:20, 2관 4DX에서 '범죄도시 4' 성인 1명, 아이 1명의 티켓을 예매하세요.",
+            requiredMovieId = "m2",
+            requiredTime = "12:20",
+            requiredTheaterId = "t2",
+            requiredAdult = 1,
+            requiredChild = 1,
+            requiredSenior = 0,
+            requiredFood = emptyList() // ⬅️ 음식 요구사항 제거
+        ),
+        // 미션 3: 티켓만 성공 (웡카, 성인 3명, 3관)
+        RequiredTicketMission(
+            id = 3,
+            title = "15:00, 3관 IMAX에서 '웡카' 성인 3명의 티켓을 예매하세요.",
+            requiredMovieId = "m4",
+            requiredTime = "15:00",
+            requiredTheaterId = "t3",
+            requiredAdult = 3,
+            requiredChild = 0,
+            requiredSenior = 0,
+            requiredFood = emptyList() // ⬅️ 음식 요구사항 제거
+        ),
+        // 미션 4: 우대 포함 (파묘, 우대 1명, 1관)
+        RequiredTicketMission(
+            id = 4,
+            title = "11:00, 1관 2D에서 '파묘' 우대 1명의 티켓을 예매하세요.",
+            requiredMovieId = "m5",
+            requiredTime = "11:00",
+            requiredTheaterId = "t1",
+            requiredAdult = 0,
+            requiredChild = 0,
+            requiredSenior = 1,
+            requiredFood = emptyList() // ⬅️ 음식 요구사항 제거
+        )
+    )
 }
