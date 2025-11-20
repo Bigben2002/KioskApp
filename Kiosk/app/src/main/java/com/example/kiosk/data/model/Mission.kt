@@ -7,6 +7,7 @@ data class Mission(
 
 data class RequiredItem(
     val name: String,
-    val quantity: Int
+    val quantity: Int,
+    val option: String? = null
 )
 

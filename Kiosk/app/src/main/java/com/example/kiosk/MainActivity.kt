@@ -12,6 +12,7 @@ import com.example.kiosk.ui.components.HelpDialog
 import com.example.kiosk.ui.components.LearningHistoryDialog
 import com.example.kiosk.ui.screens.KioskSimulatorScreen
 import com.example.kiosk.ui.screens.burger.BurgerKioskScreen  // ✨ 새로 추가
+import com.example.kiosk.ui.screens.cafe.CafeKioskScreen
 import com.example.kiosk.ui.screens.cinema.CinemaFlowRoot
 import com.example.kiosk.ui.screens.main.MainMenuScreen
 import com.example.kiosk.ui.screens.main.PracticeKioskSelectScreen
@@ -91,6 +92,13 @@ fun KioskApp() {
                         onExit = { currentScreen = ScreenState.MENU }
                     )
                 }
+                KioskType.CAFE -> {
+                    // ☕️ 새로운 카페 키오스크 (고급 기능)
+                    CafeKioskScreen(
+                        isPracticeMode = true,
+                        onExit = { currentScreen = ScreenState.MENU }
+                    )
+                }
                 else -> {
                     // ☕ 카페, 식당 등은 기존 시뮬레이터 사용
                     KioskSimulatorScreen(
@@ -119,6 +127,13 @@ fun KioskApp() {
                         onExit = { currentScreen = ScreenState.MENU }
                     )
                 }
+                KioskType.CAFE -> {
+                // ☕️ 새로운 카페 키오스크 (고급 기능)
+                CafeKioskScreen(
+                    isPracticeMode = false,
+                    onExit = { currentScreen = ScreenState.MENU }
+                )
+            }
                 else -> {
                     // ☕ 카페, 식당 등은 기존 시뮬레이터 사용
                     KioskSimulatorScreen(
