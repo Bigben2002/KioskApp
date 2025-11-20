@@ -111,7 +111,7 @@ fun CinemaFlowRoot(
         practiceStep = 1 // 연습 모드 재시작
     }
 
-    // 연습 모드 단계 관리 함수 (KioskViewModel의 startPractice, selectCategory 역할 흡수)
+    // 연습 모드 단계 관리 함수
     fun startPractice() { practiceStarted = true }
     fun nextPracticeStep() { practiceStep++ }
 
@@ -221,7 +221,8 @@ fun CinemaFlowRoot(
                 CinemaStage.SEAT -> {
                     PracticeBanner("선택한 인원 수(${totalPeopleCount}명)만큼 좌석을 선택해주세요 (4/4)")
 
-                    val reservedSeats = rememberReservedSeats(selectedTheater?.id)
+                    // 🔴 [수정됨] id가 아니라 객체 자체(selectedTheater)를 넘겨주어야 합니다.
+                    val reservedSeats = rememberReservedSeats(selectedTheater)
 
                     SeatSelectScreen(
                         peopleCount = totalPeopleCount,
@@ -235,9 +236,7 @@ fun CinemaFlowRoot(
                             }
                         },
                         onNext = {
-                            // ✅ 수정된 부분: 결제 단계로 이동
                             stage = CinemaStage.PAYMENT
-                            // ❌ 이전: if (isPracticeMode) resetFlow() // 연습 모드는 여기서 완료 (잘못된 로직)
                         },
                         onBack = { stage = CinemaStage.BOOKING }
                     )
@@ -291,7 +290,6 @@ fun CinemaFlowRoot(
                         }
                         PaymentStep.SUCCESS -> {
                             PracticeBanner("결제가 완료되었습니다! 연습 끝!")
-                            // ✅ 수정된 부분: 결제 완료 후 최종적으로 resetFlow() 호출
                             PaymentSuccessScreen_Ticket(
                                 movie = selectedMovie,
                                 time = selectedTime,
@@ -312,7 +310,6 @@ fun CinemaFlowRoot(
                 // --- 5. 스낵 ---
                 CinemaStage.SNACK -> {
                     PracticeBanner("주문할 스낵이나 음료를 선택해주세요")
-                    // KioskViewModel 없이 독립적으로 작동
                     CinemaFoodScreen(
                         modifier = Modifier.fillMaxSize(),
                         onClose = { stage = CinemaStage.HOME }
@@ -322,7 +319,6 @@ fun CinemaFlowRoot(
                 // --- 6. 티켓 출력 ---
                 CinemaStage.PRINT -> {
                     PracticeBanner("예매하신 티켓의 QR/예매번호를 입력해주세요")
-                    // KioskViewModel 없이 독립적으로 작동
                     PrintTicketScreen(
                         onBack = { resetFlow() }
                     )

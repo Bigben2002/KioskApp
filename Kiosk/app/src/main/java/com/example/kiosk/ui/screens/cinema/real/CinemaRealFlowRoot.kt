@@ -24,21 +24,21 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import com.example.kiosk.ui.screens.cinema.* // CinemaData, Screens의 모든 요소를 임포트
+import com.example.kiosk.ui.screens.cinema.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CinemaRealFlowRoot(
     onExit: () -> Unit
 ) {
-    // ⬇️ KioskViewModel 역할 흡수: 상태 관리 및 리포지토리 초기화
     val context = LocalContext.current
     val historyRepository = remember { HistoryRepository(context) }
     val coroutineScope = rememberCoroutineScope()
 
     // --- 1. 미션 로드 및 상태 관리 ---
     val allMissions = rememberCinemaMissions()
-    val currentMission = remember { allMissions.random() } // ✅ 미션 랜덤 선택
+    // ✅ [수정] 미션을 갱신할 수 있도록 mutableStateOf로 변경
+    var currentMission by remember { mutableStateOf(allMissions.random()) }
 
     // --- 2. 상태 변수 ---
     var stage by remember { mutableStateOf(CinemaStage.HOME) }
@@ -58,14 +58,15 @@ fun CinemaRealFlowRoot(
     var selectedSeats by remember { mutableStateOf<Set<String>>(emptySet()) }
     var showSeatInstructionPopup by remember { mutableStateOf(false) }
 
-    // 결제 단계
     var paymentStep by remember { mutableStateOf(PaymentStep.METHOD_SELECT) }
+    var selectedPaymentMethod by remember { mutableStateOf<String?>(null) } // ✅ 선택된 결제 방식 저장
 
-    // 미션 성공 상태
-    var ticketMissionSuccess by remember { mutableStateOf(false) }
+    // 예매 조건 충족 여부 (결제 전까지의 내용)
+    var bookingConditionsMet by remember { mutableStateOf(false) }
+
+    // 최종 미션 결과 텍스트
     var finalMissionResultText by remember { mutableStateOf<String?>(null) }
 
-    // 티켓 가격 계산 (기존 로직 유지)
     val totalPrice by derivedStateOf {
         val fullPrice = when {
             selectedTheater?.name?.contains("4DX") == true -> 16000
@@ -80,16 +81,12 @@ fun CinemaRealFlowRoot(
 
     val barColor = Color(0xFF334155)
 
-
-    // ⬇️ KioskViewModel 역할 흡수: 비즈니스 로직
-
-    /**
-     * KioskViewModel의 checkTicketMission 역할 흡수
-     */
+    // ⬇️ 미션 체크 로직 (결제 방식 포함)
     fun checkTicketMission(
         mission: RequiredTicketMission,
         movieId: String?, time: String?, theaterId: String?,
-        adultCount: Int, childCount: Int, seniorCount: Int
+        adultCount: Int, childCount: Int, seniorCount: Int,
+        paymentMethod: String? // ✅ 파라미터 추가
     ): Boolean {
         return (
                 movieId == mission.requiredMovieId &&
@@ -97,31 +94,21 @@ fun CinemaRealFlowRoot(
                         theaterId == mission.requiredTheaterId &&
                         adultCount == mission.requiredAdult &&
                         childCount == mission.requiredChild &&
-                        seniorCount == mission.requiredSenior
+                        seniorCount == mission.requiredSenior &&
+                        paymentMethod == mission.requiredPaymentMethod // ✅ 결제 방식 체크
                 )
     }
 
-    /**
-     * KioskViewModel의 getAndSaveCinemaMissionResult 역할 흡수
-     */
     suspend fun saveMissionResult(
-        isTicketSuccess: Boolean
+        isSuccess: Boolean
     ): String = withContext(Dispatchers.IO) {
-
-        val totalMissions = 1
-        var successCount = if (isTicketSuccess) 1 else 0
-
-        val successStatus = if (isTicketSuccess) "100%" else "0%"
-        val totalSuccess = successCount == totalMissions
-        val resultText = "$successCount/$totalMissions ($successStatus)"
-
-        // HistoryRecord 저장
+        val resultText = if (isSuccess) "100%" else "0%"
         val dateFormat = SimpleDateFormat("MM.dd HH:mm", Locale.getDefault())
         val record = HistoryRecord(
             id = System.currentTimeMillis().toString(),
             date = dateFormat.format(Date()),
             mission = currentMission.title,
-            success = totalSuccess,
+            success = isSuccess,
             userOrder = emptyList(),
             timestamp = System.currentTimeMillis(),
             cinemaSuccessStatus = resultText
@@ -130,8 +117,7 @@ fun CinemaRealFlowRoot(
         return@withContext resultText
     }
 
-
-    // 모든 상태 초기화
+    // ✅ [수정] 모든 상태 초기화 및 **새로운 미션 할당**
     fun resetFlow() {
         stage = CinemaStage.HOME
         bookingStep = BookingStep.MOVIE
@@ -144,10 +130,13 @@ fun CinemaRealFlowRoot(
         seniorCount = 0
         selectedSeats = emptySet()
         paymentStep = PaymentStep.METHOD_SELECT
-        ticketMissionSuccess = false
+        selectedPaymentMethod = null
+        bookingConditionsMet = false
         finalMissionResultText = null
-    }
 
+        // 새로운 미션 랜덤 할당
+        currentMission = allMissions.random()
+    }
 
     Scaffold(
         topBar = {
@@ -171,11 +160,12 @@ fun CinemaRealFlowRoot(
     ) { inner ->
         Column(modifier = Modifier.padding(inner).fillMaxSize()) {
 
-            // === 1. 미션 안내 배너 (실전 모드) ===
+            // === 미션 안내 배너 ===
+            // ✅ 결제 방식이 미션에 포함되었음을 강조
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFFEA580C)) // orange-600
+                    .background(Color(0xFFEA580C))
                     .padding(12.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -187,9 +177,7 @@ fun CinemaRealFlowRoot(
                 )
             }
 
-            // --- 화면(Stage) 분기 ---
             when (stage) {
-                // --- 1. 홈 ---
                 CinemaStage.HOME -> {
                     CinemaHomeScreen(
                         onTicket = { stage = CinemaStage.BOOKING },
@@ -199,7 +187,6 @@ fun CinemaRealFlowRoot(
                     )
                 }
 
-                // --- 2. 예매 ---
                 CinemaStage.BOOKING -> {
                     BookingScreen(
                         bookingStep = bookingStep,
@@ -236,14 +223,15 @@ fun CinemaRealFlowRoot(
                             showSeatInstructionPopup = true
                         },
                         onBack = { stage = CinemaStage.HOME },
-                        onShowTimetable = { /* 실전 모드에서는 팝업 없음 */ },
+                        onShowTimetable = { },
                         totalPrice = totalPrice
                     )
                 }
 
-                // --- 3. 좌석 선택 ---
                 CinemaStage.SEAT -> {
-                    val reservedSeats = rememberReservedSeats(selectedTheater?.id)
+                    // ✅ 변경된 rememberReservedSeats 사용 (랜덤 점유)
+                    val reservedSeats = rememberReservedSeats(selectedTheater)
+
                     SeatSelectScreen(
                         peopleCount = totalPeopleCount,
                         selectedSeats = selectedSeats,
@@ -256,32 +244,25 @@ fun CinemaRealFlowRoot(
                             }
                         },
                         onNext = {
-                            // ✅ 티켓 미션 성공 여부 검증 및 저장
-                            ticketMissionSuccess = checkTicketMission(
-                                currentMission,
-                                selectedMovie?.id, selectedTime, selectedTheater?.id,
-                                adultCount, childCount, seniorCount
-                            )
-
-                            // 바로 결제 단계로 이동
+                            // 결제 전 단계까지의 미션 조건 임시 저장 (결제 방식 제외)
+                            // 결제 방식은 다음 단계에서 선택하므로 여기서는 나머지 조건만 확인
+                            // 실제 최종 확인은 결제 완료 시점에 수행
                             stage = CinemaStage.PAYMENT
                         },
                         onBack = { stage = CinemaStage.BOOKING }
                     )
 
                     if (showSeatInstructionPopup) {
-                        SeatInstructionDialog(
-                            onDismiss = { showSeatInstructionPopup = false }
-                        )
+                        SeatInstructionDialog(onDismiss = { showSeatInstructionPopup = false })
                     }
                 }
 
-                // --- 4. 결제 단계 ---
                 CinemaStage.PAYMENT -> {
                     when (paymentStep) {
                         PaymentStep.METHOD_SELECT -> {
                             PaymentMethodSelectScreen(
                                 onPaid = { method ->
+                                    selectedPaymentMethod = method // ✅ 결제 방식 저장
                                     if (method == "CARD") paymentStep = PaymentStep.CARD_INSERT
                                     else if (method == "QR") paymentStep = PaymentStep.QR_SCAN
                                 },
@@ -301,11 +282,16 @@ fun CinemaRealFlowRoot(
                             LaunchedEffect(Unit) {
                                 delay(3000)
 
-                                // ✅ 최종 미션 결과 저장 및 텍스트 획득 (코루틴 사용)
+                                // ✅ 최종 미션 성공 여부 판별 (결제 방식까지 포함)
+                                val isSuccess = checkTicketMission(
+                                    currentMission,
+                                    selectedMovie?.id, selectedTime, selectedTheater?.id,
+                                    adultCount, childCount, seniorCount,
+                                    selectedPaymentMethod
+                                )
+
                                 coroutineScope.launch {
-                                    finalMissionResultText = saveMissionResult(
-                                        isTicketSuccess = ticketMissionSuccess,
-                                    )
+                                    finalMissionResultText = saveMissionResult(isSuccess)
                                 }
                                 paymentStep = PaymentStep.SUCCESS
                             }
@@ -321,23 +307,22 @@ fun CinemaRealFlowRoot(
                                 childCount = childCount,
                                 seniorCount = seniorCount,
                                 totalPrice = totalPrice,
-                                missionResultText = finalMissionResultText ?: "오류 발생",
+                                missionResultText = finalMissionResultText ?: "판독 중...",
                                 onDone = onExit,
+                                // ✅ 다시 도전 시 resetFlow() 호출 -> 새로운 미션 생성됨
                                 onAgain = { resetFlow() }
                             )
                         }
                     }
                 }
 
-                // --- 5. 스낵 (미션과 무관한 독립된 기능) ---
                 CinemaStage.SNACK -> {
                     CinemaFoodScreen(
                         modifier = Modifier.fillMaxSize(),
-                        onClose = { stage = CinemaStage.HOME } // 완료 시 홈으로 복귀
+                        onClose = { stage = CinemaStage.HOME }
                     )
                 }
 
-                // --- 6. 티켓 출력 ---
                 CinemaStage.PRINT -> {
                     PrintTicketScreen(onBack = { stage = CinemaStage.HOME })
                 }

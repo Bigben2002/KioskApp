@@ -32,14 +32,15 @@ data class TheaterOption(
 
 data class RequiredTicketMission(
     val id: Int,
-    val title: String, // 미션 제목
+    val title: String,
     val requiredMovieId: String,
     val requiredTime: String,
     val requiredTheaterId: String,
     val requiredAdult: Int,
     val requiredChild: Int,
     val requiredSenior: Int,
-    val requiredFood: List<RequiredItem> // 음식 미션 (모두 제거됨)
+    val requiredPaymentMethod: String, // CARD / QR
+    val requiredFood: List<RequiredItem>
 )
 
 data class BookedTicket(
@@ -76,40 +77,34 @@ fun rememberMovies(): List<MovieItem> = remember {
 @Composable
 fun rememberTheaters(): List<TheaterOption> = remember {
     listOf(
-        TheaterOption("t1", "1관 2D",   120, 80),
-        TheaterOption("t2", "2관 4DX",   96, 86),
-        TheaterOption("t3", "3관 IMAX",  84, 33)
+        TheaterOption("t1", "1관 2D",   120, 80), // 40석 점유
+        TheaterOption("t2", "2관 4DX",   96, 86), // 10석 점유
+        TheaterOption("t3", "3관 IMAX",  84, 33)  // 51석 점유
     )
 }
 
+// ✅ 랜덤 좌석 점유 로직 (기존 유지)
 @Composable
-fun rememberReservedSeats(theaterId: String?): Set<String> = remember(theaterId) {
-    when (theaterId) {
+fun rememberReservedSeats(theater: TheaterOption?): Set<String> = remember(theater) {
+    if (theater == null) return@remember emptySet()
+
+    val allSeats = mutableListOf<String>()
+    when (theater.id) {
         "t1" -> {
-            val seats = mutableSetOf<String>()
-            for (row in 'A'..'C') {
-                for (col in 1..12) {
-                    seats.add("$row$col")
-                }
-            }
-            for (col in 1..4) { seats.add("D$col") }
-            seats
+            for (row in 'A'..'J') { for (col in 1..12) { allSeats.add("$row$col") } }
         }
         "t2" -> {
-            (1..10).map { "J$it" }.toSet()
+            for (row in 'A'..'H') { for (col in 1..12) { allSeats.add("$row$col") } }
         }
         "t3" -> {
-            val seats = mutableSetOf<String>()
-            for (row in 'A'..'D') {
-                for (col in 1..12) {
-                    seats.add("$row$col")
-                }
-            }
-            for (col in 1..3) { seats.add("E$col") }
-            seats
+            for (row in 'A'..'G') { for (col in 1..12) { allSeats.add("$row$col") } }
         }
-        else -> emptySet()
+        else -> {}
     }
+
+    val actualTotal = allSeats.size
+    val targetReservedCount = (actualTotal - theater.remainingSeats).coerceAtLeast(0)
+    allSeats.shuffled().take(targetReservedCount).toSet()
 }
 
 @Composable
@@ -135,58 +130,59 @@ fun rememberBookedTickets(
 }
 
 /**
- * ✅ 영화관 실전 모드 미션 목록 (음식 미션 요구사항 제거)
+ * ✅ [수정] 미션 텍스트에 '상영관 이름'을 명확하게 표기
  */
 @Composable
 fun rememberCinemaMissions(): List<RequiredTicketMission> = remember {
     listOf(
-        // 미션 1: 티켓만 성공 (인사이드 아웃 2, 성인 2명, 1관)
         RequiredTicketMission(
             id = 1,
-            title = "오늘 10:30, 1관에서 '인사이드 아웃 2' 성인 2명의 티켓을 예매하세요.",
+            // 문장형: "언제, 어디서, 무엇을, 어떻게"
+            title = "10:30에 상영하는 '인사이드 아웃 2'를 1관(2D)에서 성인 2명으로 카드를 이용해 결제하세요.",
             requiredMovieId = "m1",
             requiredTime = "10:30",
             requiredTheaterId = "t1",
             requiredAdult = 2,
             requiredChild = 0,
             requiredSenior = 0,
-            requiredFood = emptyList() // ⬅️ 음식 요구사항 제거
+            requiredPaymentMethod = "CARD",
+            requiredFood = emptyList()
         ),
-        // 미션 2: 티켓만 성공 (범죄도시 4, 성인 1명, 아이 1명, 2관)
         RequiredTicketMission(
             id = 2,
-            title = "12:20, 2관 4DX에서 '범죄도시 4' 성인 1명, 아이 1명의 티켓을 예매하세요.",
+            title = "12:20에 상영하는 '범죄도시 4'를 2관(4DX)에서 성인 1명, 아이 1명으로 QR코드를 이용해 결제하세요.",
             requiredMovieId = "m2",
             requiredTime = "12:20",
             requiredTheaterId = "t2",
             requiredAdult = 1,
             requiredChild = 1,
             requiredSenior = 0,
-            requiredFood = emptyList() // ⬅️ 음식 요구사항 제거
+            requiredPaymentMethod = "QR",
+            requiredFood = emptyList()
         ),
-        // 미션 3: 티켓만 성공 (웡카, 성인 3명, 3관)
         RequiredTicketMission(
             id = 3,
-            title = "15:00, 3관 IMAX에서 '웡카' 성인 3명의 티켓을 예매하세요.",
+            title = "15:00에 상영하는 '웡카'를 3관(IMAX)에서 성인 3명으로 카드를 이용해 결제하세요.",
             requiredMovieId = "m4",
             requiredTime = "15:00",
             requiredTheaterId = "t3",
             requiredAdult = 3,
             requiredChild = 0,
             requiredSenior = 0,
-            requiredFood = emptyList() // ⬅️ 음식 요구사항 제거
+            requiredPaymentMethod = "CARD",
+            requiredFood = emptyList()
         ),
-        // 미션 4: 우대 포함 (파묘, 우대 1명, 1관)
         RequiredTicketMission(
             id = 4,
-            title = "11:00, 1관 2D에서 '파묘' 우대 1명의 티켓을 예매하세요.",
+            title = "11:00에 상영하는 '파묘'를 1관(2D)에서 우대 1명으로 QR코드를 이용해 결제하세요.",
             requiredMovieId = "m5",
             requiredTime = "11:00",
             requiredTheaterId = "t1",
             requiredAdult = 0,
             requiredChild = 0,
             requiredSenior = 1,
-            requiredFood = emptyList() // ⬅️ 음식 요구사항 제거
+            requiredPaymentMethod = "QR",
+            requiredFood = emptyList()
         )
     )
 }
