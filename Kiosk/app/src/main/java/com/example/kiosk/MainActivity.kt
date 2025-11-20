@@ -46,17 +46,18 @@ fun KioskApp() {
 
     // 현재 선택된 매장 타입 (선택 페이지에서 설정)
     var currentKioskType by remember { mutableStateOf(KioskType.BURGER) }
+    var modeIntent by remember { mutableStateOf(ScreenState.PRACTICE) }
 
     when (currentScreen) {
         ScreenState.MENU -> {
             MainMenuScreen(
                 onNavigateToPractice = {
+                    modeIntent = ScreenState.PRACTICE // 👈 인텐트 저장
                     currentScreen = ScreenState.PRACTICE_SELECT
                 },
                 onNavigateToReal = {
-                    // 실전 모드도 선택 페이지로 이동하도록 변경 (선택 사항)
+                    modeIntent = ScreenState.REAL // 👈 인텐트 저장
                     currentScreen = ScreenState.PRACTICE_SELECT
-                    // 또는 기존처럼 바로 REAL로 가려면: currentScreen = ScreenState.REAL
                 },
                 onOpenHelp = { showHelpDialog = true },
                 onOpenHistory = { showHistoryDialog = true }
@@ -67,7 +68,7 @@ fun KioskApp() {
             PracticeKioskSelectScreen(
                 onSelect = { type ->
                     currentKioskType = type
-                    currentScreen = ScreenState.PRACTICE
+                    currentScreen = modeIntent
                 },
                 onBack = { currentScreen = ScreenState.MENU }
             )
