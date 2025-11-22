@@ -29,8 +29,8 @@ enum class KioskType(
     ),
     RESTAURANT(
         title = "식당",
-        themeColor = Color(0xFF16A34A),
+        themeColor = Color(0xFF8B4513),
         icon = "🍱",
-        categories = emptyList() // 추후용
+        categories = listOf("국밥류", "사이드", "음료")
     )
 }
