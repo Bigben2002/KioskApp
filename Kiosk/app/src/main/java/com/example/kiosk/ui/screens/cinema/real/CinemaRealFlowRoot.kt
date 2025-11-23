@@ -1,5 +1,7 @@
 package com.example.kiosk.ui.screens.cinema.real
 
+import androidx.compose.runtime.derivedStateOf
+import android.app.Application
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -32,7 +34,8 @@ fun CinemaRealFlowRoot(
     onExit: () -> Unit
 ) {
     val context = LocalContext.current
-    val historyRepository = remember { HistoryRepository(context) }
+    val application = remember(context) { context.applicationContext as Application }
+    val historyRepository = remember { HistoryRepository(application) }
     val coroutineScope = rememberCoroutineScope()
 
     // --- 1. 미션 로드 및 상태 관리 ---
@@ -53,7 +56,9 @@ fun CinemaRealFlowRoot(
     var adultCount by remember { mutableIntStateOf(0) }
     var childCount by remember { mutableIntStateOf(0) }
     var seniorCount by remember { mutableIntStateOf(0) }
-    val totalPeopleCount by derivedStateOf { adultCount + childCount + seniorCount }
+    val totalPeopleCount by remember {
+        derivedStateOf { adultCount + childCount + seniorCount }
+    }
 
     var selectedSeats by remember { mutableStateOf<Set<String>>(emptySet()) }
     var showSeatInstructionPopup by remember { mutableStateOf(false) }
@@ -67,16 +72,18 @@ fun CinemaRealFlowRoot(
     // 최종 미션 결과 텍스트
     var finalMissionResultText by remember { mutableStateOf<String?>(null) }
 
-    val totalPrice by derivedStateOf {
-        val fullPrice = when {
-            selectedTheater?.name?.contains("4DX") == true -> 16000
-            selectedTheater?.name?.contains("IMAX") == true -> 16000
-            else -> 10000
-        }
-        val childPrice = (fullPrice - 2000).coerceAtLeast(0)
-        val seniorPrice = (fullPrice - 2000).coerceAtLeast(0)
+    val totalPrice by remember {
+        derivedStateOf {
+            val fullPrice = when {
+                selectedTheater?.name?.contains("4DX") == true -> 16000
+                selectedTheater?.name?.contains("IMAX") == true -> 16000
+                else -> 10000
+            }
+            val childPrice = (fullPrice - 2000).coerceAtLeast(0)
+            val seniorPrice = (fullPrice - 2000).coerceAtLeast(0)
 
-        (adultCount * fullPrice) + (childCount * childPrice) + (seniorCount * seniorPrice)
+            (adultCount * fullPrice) + (childCount * childPrice) + (seniorCount * seniorPrice)
+        }
     }
 
     val barColor = Color(0xFF334155)
@@ -111,7 +118,6 @@ fun CinemaRealFlowRoot(
             success = isSuccess,
             userOrder = emptyList(),
             timestamp = System.currentTimeMillis(),
-            cinemaSuccessStatus = resultText
         )
         historyRepository.saveHistory(record)
         return@withContext resultText
@@ -144,7 +150,11 @@ fun CinemaRealFlowRoot(
                 title = { Text("영화관 실전 모드", color = Color.White, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onExit) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", tint = Color.White)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "뒤로",
+                            tint = Color.White
+                        )
                     }
                 },
                 actions = {
@@ -158,7 +168,9 @@ fun CinemaRealFlowRoot(
             )
         }
     ) { inner ->
-        Column(modifier = Modifier.padding(inner).fillMaxSize()) {
+        Column(modifier = Modifier
+            .padding(inner)
+            .fillMaxSize()) {
 
             // === 미션 안내 배너 ===
             // ✅ 결제 방식이 미션에 포함되었음을 강조
@@ -181,9 +193,9 @@ fun CinemaRealFlowRoot(
                 CinemaStage.HOME -> {
                     CinemaHomeScreen(
                         onTicket = { stage = CinemaStage.BOOKING },
-                        onPrint  = { stage = CinemaStage.PRINT },
+                        onPrint = { stage = CinemaStage.PRINT },
                         onRefund = {},
-                        onSnack  = { stage = CinemaStage.SNACK }
+                        onSnack = { stage = CinemaStage.SNACK }
                     )
                 }
 
@@ -269,14 +281,21 @@ fun CinemaRealFlowRoot(
                                 onBack = { stage = CinemaStage.SEAT }
                             )
                         }
+
                         PaymentStep.CARD_INSERT -> {
                             PaymentCardInsertScreen()
-                            LaunchedEffect(Unit) { delay(2000); paymentStep = PaymentStep.PROCESSING }
+                            LaunchedEffect(Unit) {
+                                delay(2000); paymentStep = PaymentStep.PROCESSING
+                            }
                         }
+
                         PaymentStep.QR_SCAN -> {
                             PaymentQrScanScreen()
-                            LaunchedEffect(Unit) { delay(2000); paymentStep = PaymentStep.PROCESSING }
+                            LaunchedEffect(Unit) {
+                                delay(2000); paymentStep = PaymentStep.PROCESSING
+                            }
                         }
+
                         PaymentStep.PROCESSING -> {
                             PaymentProcessingScreen()
                             LaunchedEffect(Unit) {
@@ -290,12 +309,12 @@ fun CinemaRealFlowRoot(
                                     selectedPaymentMethod
                                 )
 
-                                coroutineScope.launch {
-                                    finalMissionResultText = saveMissionResult(isSuccess)
-                                }
+                                finalMissionResultText = saveMissionResult(isSuccess)
+
                                 paymentStep = PaymentStep.SUCCESS
                             }
                         }
+
                         PaymentStep.SUCCESS -> {
                             MissionResultScreen_Ticket(
                                 movie = selectedMovie,

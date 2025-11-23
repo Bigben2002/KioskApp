@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "315672414428",
+    "project_id": "kioskapp-9a14e",
+    "storage_bucket": "kioskapp-9a14e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:315672414428:android:0748005dc508e1c5de0c19",
+        "android_client_info": {
+          "package_name": "com.example.kiosk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpyTXru1suv2WJyapQeG508vryKzBk-iw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

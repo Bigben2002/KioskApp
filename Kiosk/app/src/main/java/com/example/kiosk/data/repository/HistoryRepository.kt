@@ -1,46 +1,55 @@
 package com.example.kiosk.data.repository
 
-import android.content.Context
+import android.app.Application
+import android.util.Log
 import com.example.kiosk.data.model.HistoryRecord
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import kotlinx.coroutines.tasks.await
 
-// 역할: 학습 기록 데이터를 기기 내부 저장소(SharedPreferences)에 저장하고 불러오는 관리자
-class HistoryRepository(context: Context) {
-    // 'kiosk_prefs'라는 이름의 저장소 공간을 사용
-    private val prefs = context.getSharedPreferences("kiosk_prefs", Context.MODE_PRIVATE)
-    private val gson = Gson() // 객체를 JSON 문자열로 변환하기 위한 도구
+class HistoryRepository(application: Application) {
 
-    // 저장된 모든 학습 기록 불러오기
-    fun getAllHistory(): List<HistoryRecord> {
-        // 저장된 JSON 문자열 가져오기
-        val json = prefs.getString("kioskLearningHistory", null)
-
-        // 저장된 게 없으면 빈 리스트 반환
-        if (json == null) {
-            return emptyList()
+    // ✅ [안전 장치] 파이어베이스가 설정 안 돼있어도 앱이 안 죽게 함
+    private val db: FirebaseFirestore? by lazy {
+        try {
+            FirebaseFirestore.getInstance()
+        } catch (e: Exception) {
+            Log.e("HistoryRepository", "파이어베이스 초기화 실패 (앱은 계속 실행됨): ${e.message}")
+            null
         }
-
-        // JSON 문자열을 HistoryRecord 리스트 객체로 변환
-        val type = object : TypeToken<List<HistoryRecord>>() {}.type
-        return gson.fromJson(json, type)
     }
 
-    // 새로운 학습 기록 저장하기
-    fun saveHistory(record: HistoryRecord) {
-        // 1. 기존 기록 불러오기
-        val currentHistory = getAllHistory().toMutableList()
+    private val collectionRef get() = db?.collection("kiosk_history")
 
-        // 2. 새 기록을 맨 앞에 추가
-        currentHistory.add(0, record)
+    // 저장 함수
+    suspend fun saveHistory(record: HistoryRecord) {
+        // DB가 없으면 저장 안 하고 조용히 끝냄
+        if (db == null) return
 
-        // 3. 50개가 넘으면 가장 오래된 기록 삭제 (React 코드 로직 유지)
-        if (currentHistory.size > 50) {
-            currentHistory.removeAt(currentHistory.lastIndex)
+        try {
+            collectionRef?.document(record.id)?.set(record)?.await()
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
+    }
 
-        // 4. 리스트를 다시 JSON 문자열로 변환하여 저장
-        val jsonString = gson.toJson(currentHistory)
-        prefs.edit().putString("kioskLearningHistory", jsonString).apply()
+    // 불러오기 함수
+    suspend fun getAllHistory(): List<HistoryRecord> {
+        if (db == null) return emptyList()
+
+        return try {
+            val snapshot = collectionRef
+                ?.orderBy("timestamp", Query.Direction.DESCENDING)
+                ?.get()
+                ?.await()
+
+            snapshot?.toObjects(HistoryRecord::class.java) ?: emptyList()
+        } catch (e: Exception) {
+            // 👇 [수정] 여기에 로그를 추가하세요!
+            Log.e("HistoryRepository", "데이터 불러오기 실패 ㅠㅠ: ${e.message}")
+            e.printStackTrace() // 에러 내용을 자세히 출력
+
+            emptyList()
+        }
     }
 }

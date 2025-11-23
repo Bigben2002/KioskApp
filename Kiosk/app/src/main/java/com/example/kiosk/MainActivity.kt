@@ -20,10 +20,12 @@ import com.example.kiosk.ui.screens.cinema.real.CinemaRealFlowRoot
 import com.example.kiosk.ui.screens.main.MainMenuScreen
 import com.example.kiosk.ui.screens.main.PracticeKioskSelectScreen
 import com.example.kiosk.ui.theme.KioskTheme
+import com.google.firebase.FirebaseApp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FirebaseApp.initializeApp(this)
         setContent {
             KioskTheme {
                 Surface(
