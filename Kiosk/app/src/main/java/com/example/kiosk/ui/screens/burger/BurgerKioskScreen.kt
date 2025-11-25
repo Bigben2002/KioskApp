@@ -1,12 +1,19 @@
 package com.example.kiosk.ui.screens.burger
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -19,20 +26,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.text.NumberFormat
 import java.util.Locale
-import androidx.compose.ui.window.Dialog
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.foundation.border
-import androidx.compose.foundation.lazy.items
 
 // 재사용 가능한 카드 컴포넌트
 @Composable
@@ -91,6 +91,7 @@ fun BurgerKioskScreen(
     val practiceStep by viewModel.practiceStep.collectAsState()
     val orderResult by viewModel.orderResult.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
+    val paymentStep by viewModel.paymentStep.collectAsState()
 
     val isSelectingSetComponents by viewModel.isSelectingSetComponents.collectAsState()
     val currentSetBurger by viewModel.currentSetBurger.collectAsState()
@@ -125,6 +126,7 @@ fun BurgerKioskScreen(
         }
     }
 
+    // 결제 완료 후 주문 결과 화면
     if (orderResult != null) {
         OrderResultScreen(
             result = orderResult!!,
@@ -134,6 +136,39 @@ fun BurgerKioskScreen(
             onExit = onExit
         )
         return
+    }
+
+    // 결제 플로우 화면들
+    when (paymentStep) {
+        PaymentStep.METHOD_SELECT -> {
+            PaymentMethodSelectScreen(
+                onPaid = { method -> viewModel.selectPaymentMethod(method) },
+                onBack = { viewModel.cancelPayment() }
+            )
+            return
+        }
+        PaymentStep.CARD_INSERT -> {
+            PaymentCardInsertScreen()
+            return
+        }
+        PaymentStep.QR_SCAN -> {
+            PaymentQrScanScreen()
+            return
+        }
+        PaymentStep.PROCESSING -> {
+            PaymentProcessingScreen()
+            return
+        }
+        PaymentStep.COMPLETE -> {
+            // 결제 완료 후 주문 완료 처리
+            LaunchedEffect(Unit) {
+                viewModel.checkout(isPracticeMode)
+            }
+            return
+        }
+        else -> {
+            // 일반 키오스크 화면 계속 진행
+        }
     }
 
     val topBarTitle = if (isPracticeMode) {
@@ -308,9 +343,19 @@ fun BurgerKioskScreen(
     if (showRecommendationDialog) {
         RecommendationDialog(
             recommendedItems = viewModel.recommendationItems,
-            onDismiss = { showRecommendationDialog = false; viewModel.checkout(isPracticeMode) },
-            onAddItem = { item -> itemToAddFromRecommendation = item; showRecommendationDialog = false },
-            onCancel = { showRecommendationDialog = false; showCartDialog = true }
+            onDismiss = {
+                showRecommendationDialog = false
+                // 추천 거절 시 바로 결제 시작
+                viewModel.startPayment()
+            },
+            onAddItem = { item ->
+                itemToAddFromRecommendation = item
+                showRecommendationDialog = false
+            },
+            onCancel = {
+                showRecommendationDialog = false
+                showCartDialog = true
+            }
         )
     }
 }

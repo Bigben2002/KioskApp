@@ -6,8 +6,11 @@ import androidx.lifecycle.viewModelScope
 import com.example.kiosk.data.repository.HistoryRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.kiosk.data.model.HistoryRecord as DataHistoryRecord
+import com.example.kiosk.data.model.RequiredItem as DataRequiredItem
 
 // 모델 클래스 정의
 data class MenuItem(
@@ -45,6 +48,16 @@ data class HistoryRecord(
     val timestamp: Long
 )
 
+// 결제 플로우 상태
+enum class PaymentStep {
+    NONE,              // 결제 전
+    METHOD_SELECT,     // 결제 방식 선택
+    CARD_INSERT,       // 카드 삽입 대기
+    QR_SCAN,          // QR 스캔 대기
+    PROCESSING,       // 결제 처리 중
+    COMPLETE          // 결제 완료
+}
+
 class BurgerKioskViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = HistoryRepository(application)
@@ -67,6 +80,13 @@ class BurgerKioskViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _currentSetBurger = MutableStateFlow<MenuItem?>(null)
     val currentSetBurger = _currentSetBurger.asStateFlow()
+
+    // 결제 플로우 상태
+    private val _paymentStep = MutableStateFlow(PaymentStep.NONE)
+    val paymentStep = _paymentStep.asStateFlow()
+
+    private val _selectedPaymentMethod = MutableStateFlow<String?>(null)
+    val selectedPaymentMethod = _selectedPaymentMethod.asStateFlow()
 
     fun setPracticeStep(step: Int) {
         _practiceStep.value = step
@@ -97,7 +117,7 @@ class BurgerKioskViewModel(application: Application) : AndroidViewModel(applicat
         MenuItem("24", "제로 사이다", "좋긴 한데, 이거마실거면 난 제로콜라 마실듯", 1500, "음료", emptyList()),
         MenuItem("25", "아이스티", "복숭아 맛 아이스티", 2000, "음료", emptyList()),
 
-        MenuItem("31", "바닐라 아이스크림", "언제 1500원 된걸까", 1500, "디저트", emptyList()),
+        MenuItem("31", "바닐라 아이스크림", "언제 1500원 됐을까", 1500, "디저트", emptyList()),
         MenuItem("32", "애플 파이", "어머니가 제일 좋아하시는", 2500, "디저트", emptyList()),
         MenuItem("33", "선데이 아이스크림", "컵에 주는거 말고 차이없지 않나", 2500, "디저트", emptyList())
     )
@@ -118,6 +138,8 @@ class BurgerKioskViewModel(application: Application) : AndroidViewModel(applicat
         _orderResult.value = null
         _practiceStep.value = if (isPractice) 0 else -1
         _selectedCategory.value = "버거"
+        _paymentStep.value = PaymentStep.NONE
+        _selectedPaymentMethod.value = null
         resetSetOrderState()
 
         if (!isPractice) {
@@ -206,6 +228,35 @@ class BurgerKioskViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    // 결제 플로우 시작
+    fun startPayment() {
+        _paymentStep.value = PaymentStep.METHOD_SELECT
+    }
+
+    // 결제 방식 선택
+    fun selectPaymentMethod(method: String) {
+        _selectedPaymentMethod.value = method
+        _paymentStep.value = when (method) {
+            "CARD" -> PaymentStep.CARD_INSERT
+            "QR" -> PaymentStep.QR_SCAN
+            else -> PaymentStep.METHOD_SELECT
+        }
+
+        // 2초 후 자동으로 결제 처리로 넘어감
+        viewModelScope.launch {
+            delay(2000)
+            processPayment()
+        }
+    }
+
+    // 결제 처리
+    private suspend fun processPayment() {
+        _paymentStep.value = PaymentStep.PROCESSING
+        delay(2000) // 결제 처리 시뮬레이션
+        _paymentStep.value = PaymentStep.COMPLETE
+    }
+
+    // 결제 완료 후 주문 완료 처리
     fun checkout(isPractice: Boolean) {
         val mission = _currentMission.value
         if (!isPractice && mission != null) {
@@ -216,6 +267,16 @@ class BurgerKioskViewModel(application: Application) : AndroidViewModel(applicat
             _orderResult.value = "complete"
         }
         if (isPractice && _practiceStep.value == 3) _practiceStep.value = 4
+
+        // 결제 상태 초기화
+        _paymentStep.value = PaymentStep.NONE
+        _selectedPaymentMethod.value = null
+    }
+
+    // 결제 취소
+    fun cancelPayment() {
+        _paymentStep.value = PaymentStep.NONE
+        _selectedPaymentMethod.value = null
     }
 
     private fun checkMissionSuccess(mission: Mission, cart: List<CartItem>): Boolean {
@@ -227,12 +288,12 @@ class BurgerKioskViewModel(application: Application) : AndroidViewModel(applicat
 
     private fun saveHistory(mission: Mission, success: Boolean) {
         val dateFormat = SimpleDateFormat("MM.dd HH:mm", Locale.getDefault())
-        val record = com.example.kiosk.data.model.HistoryRecord(
+        val record = DataHistoryRecord(
             id = System.currentTimeMillis().toString(),
             date = dateFormat.format(Date()),
             mission = mission.description,
             success = success,
-            userOrder = _cart.value.map { com.example.kiosk.data.model.RequiredItem(it.menuItem.name, it.quantity) },
+            userOrder = _cart.value.map { DataRequiredItem(it.menuItem.name, it.quantity) },
             timestamp = System.currentTimeMillis()
         )
         viewModelScope.launch { repository.saveHistory(record) }
