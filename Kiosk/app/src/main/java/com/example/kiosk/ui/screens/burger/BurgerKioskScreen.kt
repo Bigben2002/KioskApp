@@ -33,6 +33,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.text.NumberFormat
 import java.util.Locale
+import androidx.compose.ui.platform.LocalContext
 
 // 재사용 가능한 카드 컴포넌트
 @Composable
@@ -85,6 +86,10 @@ fun BurgerKioskScreen(
     onExit: () -> Unit,
     viewModel: BurgerKioskViewModel = viewModel()
 ) {
+    // 🎵 오디오 가이드 매니저 초기화
+    val context = LocalContext.current
+    val audioGuide = if (isPracticeMode) rememberAudioGuideManager(context) else null
+
     val cart by viewModel.cart.collectAsState()
     val totalPrice by viewModel.totalPrice.collectAsState()
     val currentMission by viewModel.currentMission.collectAsState()
@@ -105,6 +110,48 @@ fun BurgerKioskScreen(
 
     LaunchedEffect(Unit) { viewModel.init(isPracticeMode) }
 
+    // 🎵 연습 단계 변경 시 오디오 재생
+    LaunchedEffect(practiceStep) {
+        if (isPracticeMode && practiceStep >= 0) {
+            audioGuide?.playAudioForStep(practiceStep)
+        }
+    }
+
+    // 🎵 장바구니 다이얼로그 열릴 때 오디오 재생
+    LaunchedEffect(showCartDialog) {
+        if (isPracticeMode && showCartDialog) {
+            audioGuide?.playAudioForEvent("07_주문하신_내용을_확인해")
+        }
+    }
+
+    // 🎵 추천 메뉴 다이얼로그 열릴 때 오디오 재생
+    LaunchedEffect(showRecommendationDialog) {
+        if (isPracticeMode && showRecommendationDialog) {
+            audioGuide?.playAudioForEvent("09_혹시_추가로_더")
+        }
+    }
+
+    // 🎵 결제 단계별 오디오 재생
+    LaunchedEffect(paymentStep) {
+        if (isPracticeMode) {
+            when (paymentStep) {
+                PaymentStep.METHOD_SELECT -> audioGuide?.playAudioForEvent("10_결제를_할_거예요_어떤")
+                PaymentStep.CARD_INSERT -> audioGuide?.playAudioForEvent("11_카드를_기계에_꽂아주세요")
+                PaymentStep.QR_SCAN -> audioGuide?.playAudioForEvent("12_큐알_코드를_화면에_비춰주세요")
+                PaymentStep.PROCESSING -> audioGuide?.playAudioForEvent("13_잠시만_기다려주세요")
+                else -> {}
+            }
+        }
+    }
+
+    // 🎵 세트 선택 시작 시 오디오 재생
+    LaunchedEffect(isSelectingSetComponents) {
+        if (isPracticeMode && isSelectingSetComponents) {
+            audioGuide?.playAudioForEvent("04_세트로_주문하시는")
+        }
+    }
+
+    // 사이드 선택 후 음료로 이동
     LaunchedEffect(selectedSide) {
         if (isSelectingSetComponents && selectedSide != null && selectedCategory == "사이드") {
             viewModel.selectCategory("음료")
@@ -112,12 +159,14 @@ fun BurgerKioskScreen(
         }
     }
 
+    // 세트 선택 초기화 함수
     val resetSetSelection = {
         selectedSide = null
         selectedDrink = null
         viewModel.resetSetOrderState()
     }
 
+    // 추천 메뉴에서 추가한 아이템 처리
     LaunchedEffect(itemToAddFromRecommendation) {
         itemToAddFromRecommendation?.let { item ->
             viewModel.addToCart(item, isPracticeMode)
@@ -126,7 +175,7 @@ fun BurgerKioskScreen(
         }
     }
 
-    // 결제 완료 후 주문 결과 화면
+    // 결제 완료 후 주문 결과 화면으로 이동
     if (orderResult != null) {
         OrderResultScreen(
             result = orderResult!!,
@@ -148,11 +197,15 @@ fun BurgerKioskScreen(
             return
         }
         PaymentStep.CARD_INSERT -> {
-            PaymentCardInsertScreen()
+            PaymentCardInsertScreen(
+                onProceed = { viewModel.proceedToProcessing() }  // 🎵 터치 시 다음 단계로
+            )
             return
         }
         PaymentStep.QR_SCAN -> {
-            PaymentQrScanScreen()
+            PaymentQrScanScreen(
+                onProceed = { viewModel.proceedToProcessing() }  // 🎵 터치 시 다음 단계로
+            )
             return
         }
         PaymentStep.PROCESSING -> {
@@ -160,7 +213,6 @@ fun BurgerKioskScreen(
             return
         }
         PaymentStep.COMPLETE -> {
-            // 결제 완료 후 주문 완료 처리
             LaunchedEffect(Unit) {
                 viewModel.checkout(isPracticeMode)
             }

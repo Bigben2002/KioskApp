@@ -1,6 +1,8 @@
 package com.example.kiosk.ui.screens.burger
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -102,14 +104,23 @@ private fun PaymentMethodCard(
 }
 
 // ------------------------------------------------------------
-// 2. '카드 삽입' 안내 화면
+// 2. '카드 삽입' 안내 화면 - 터치로 진행
 // ------------------------------------------------------------
 @Composable
-fun PaymentCardInsertScreen() {
+fun PaymentCardInsertScreen(
+    onProceed: () -> Unit = {}
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onProceed
+            )
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -124,20 +135,37 @@ fun PaymentCardInsertScreen() {
         Text(
             "카드를 단말기에 삽입해주세요",
             fontSize = 22.sp,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            "화면을 터치하면 다음 단계로 진행됩니다",
+            fontSize = 16.sp,
+            color = Color.Gray,
+            textAlign = TextAlign.Center
         )
     }
 }
 
 // ------------------------------------------------------------
-// 3. 'QR 스캔' 안내 화면
+// 3. 'QR 스캔' 안내 화면 - 터치로 진행
 // ------------------------------------------------------------
 @Composable
-fun PaymentQrScanScreen() {
+fun PaymentQrScanScreen(
+    onProceed: () -> Unit = {}
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onProceed
+            )
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -150,9 +178,16 @@ fun PaymentQrScanScreen() {
         )
         Spacer(Modifier.height(24.dp))
         Text(
-            "QR코드를 QR코드 리더기에 맞춰주세요",
+            "QR코드를 리더기에 맞춰주세요",
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            "화면을 터치하면 다음 단계로 진행됩니다",
+            fontSize = 16.sp,
+            color = Color.Gray,
             textAlign = TextAlign.Center
         )
     }

@@ -168,24 +168,6 @@ class BurgerKioskViewModel(application: Application) : AndroidViewModel(applicat
         if (_currentMission.value == null && _practiceStep.value > 0) _practiceStep.value = 3
     }
 
-    fun completeSetOrder(side: MenuItem, drink: MenuItem) {
-        val burger = _currentSetBurger.value ?: return
-        val setOption = burger.options.find { it.id == "set" } ?: return
-
-        addToCart(burger, false, setOption)
-
-        _cart.value = _cart.value.toMutableList().apply {
-            add(CartItem(side, 1, isSetComponent = true))
-        }
-
-        _cart.value = _cart.value.toMutableList().apply {
-            add(CartItem(drink, 1, isSetComponent = true))
-        }
-
-        updateTotal()
-        resetSetOrderState()
-    }
-
     fun startPractice() { _practiceStep.value = 1 }
 
     fun selectCategory(category: String) {
@@ -228,6 +210,31 @@ class BurgerKioskViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    // 세트 완료 시 호출할 함수 (step 7 트리거)
+    fun completeSetOrder(sideItem: MenuItem, drinkItem: MenuItem) {
+        val burger = _currentSetBurger.value ?: return
+        val setOption = burger.options.find { it.id == "set" } ?: return
+
+        addToCart(burger, false, setOption)
+
+        _cart.value = _cart.value.toMutableList().apply {
+            add(CartItem(sideItem, 1, isSetComponent = true))
+        }
+
+        _cart.value = _cart.value.toMutableList().apply {
+            add(CartItem(drinkItem, 1, isSetComponent = true))
+        }
+
+        updateTotal()
+
+        // 세트 구성 완료 단계로 이동
+        if (_currentMission.value == null && _practiceStep.value > 0) {
+            _practiceStep.value = 7
+        }
+
+        resetSetOrderState()
+    }
+
     // 결제 플로우 시작
     fun startPayment() {
         _paymentStep.value = PaymentStep.METHOD_SELECT
@@ -241,10 +248,10 @@ class BurgerKioskViewModel(application: Application) : AndroidViewModel(applicat
             "QR" -> PaymentStep.QR_SCAN
             else -> PaymentStep.METHOD_SELECT
         }
+    }
 
-        // 2초 후 자동으로 결제 처리로 넘어감
+    fun proceedToProcessing() {
         viewModelScope.launch {
-            delay(2000)
             processPayment()
         }
     }
