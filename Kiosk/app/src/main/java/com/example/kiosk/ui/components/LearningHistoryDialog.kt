@@ -192,10 +192,16 @@ private fun HistoryItemCard(record: HistoryRecord) {
             Text(text = "미션", fontSize = 14.sp, color = Color(0xFF4B5563), modifier = Modifier.padding(bottom = 4.dp))
             Text(text = record.mission, fontSize = 16.sp, modifier = Modifier.padding(bottom = 12.dp))
 
-            if (record.userOrder.isNotEmpty()) {
-                Text(text = "주문 내역", fontSize = 14.sp, color = Color(0xFF4B5563), modifier = Modifier.padding(bottom = 4.dp))
-                val orderText = record.userOrder.joinToString(", ") { item -> "${item.name} ${item.quantity}개" }
-                Text(text = orderText, fontSize = 14.sp, color = Color(0xFF1F2937))
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                record.userOrder.forEach { item ->
+                    val optionText = if (!item.option.isNullOrEmpty()) " (${item.option})" else ""
+
+                    Text(
+                        text = "• ${item.name}$optionText ${item.quantity}개",
+                        fontSize = 14.sp,
+                        color = Color(0xFF1F2937)
+                    )
+                }
             }
         }
     }

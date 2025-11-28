@@ -816,18 +816,37 @@ fun OrderResultScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                "${item.menuItem.name} × ${item.quantity}",
-                                fontSize = 18.sp,
-                                color = Color(0xFF374151)
-                            )
-                            Text(
-                                "${NumberFormat.getNumberInstance(Locale.KOREA).format(item.menuItem.price * item.quantity)}원",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Medium
-                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                // 1. 메뉴 이름
+                                Text(
+                                    "${item.menuItem.name} × ${item.quantity}",
+                                    fontSize = 18.sp,
+                                    color = Color(0xFF374151),
+                                    fontWeight = FontWeight.Medium
+                                )
+
+                                // 2. 옵션 표시 (이제 Column 안에 있어서 이름 아래로 내려갑니다)
+                                if (item.selectedOptions.isNotEmpty()) {
+                                    val optionStr =
+                                        item.selectedOptions.joinToString(", ") { it.name }
+                                    Text(
+                                        text = "└ $optionStr",
+                                        fontSize = 14.sp,
+                                        color = Color.Gray,
+                                        modifier = Modifier.padding(top = 2.dp) // 살짝 간격 줌
+                                    )
+                                } else if (item.selectedOption != null) {
+                                    Text(
+                                        text = "└ ${item.selectedOption.name}",
+                                        fontSize = 14.sp,
+                                        color = Color.Gray,
+                                        modifier = Modifier.padding(top = 2.dp)
+                                    )
+                                }
+                            }
                         }
                     }
 

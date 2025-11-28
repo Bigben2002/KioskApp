@@ -100,16 +100,57 @@ class CafeKioskViewModel(application: Application) : AndroidViewModel(applicatio
         if (!isPractice) {
             val missions = listOf(
                 Mission(
-                    "아이스 아메리카노 2잔을 주문해보세요",
-                    listOf(RequiredItem("아메리카노", 2, "ICE")) // 옵션 검증을 위해 필요한 경우 모델 수정 필요
+                    "따뜻한 아메리카노 3잔을 주문해보세요",
+                    listOf(
+                        RequiredItem("아메리카노", 3, "HOT")
+                    )
+                ),
+                Mission(
+                    "아이스 바닐라라떼(얼음 적게) 1잔을 주문해보세요",
+                    listOf(
+                        RequiredItem("바닐라라떼", 1, "ICE, 얼음 적게")
+                    )
+                ),
+                Mission(
+                    "크로플(포크 2개) 1개를 주문해보세요",
+                    listOf(
+                        RequiredItem("크로플", 1, "기본, 포크 2개")
+                    )
+                ),
+                Mission(
+                    "레몬에이드(얼음 추가) 1잔, 아이스티(얼음 빼기) 1잔을 주문해보세요",
+                    listOf(
+                        RequiredItem("레몬에이드", 1, "ICE Only, 얼음 추가"),
+                        RequiredItem("아이스티", 1, "ICE Only, 얼음 빼기")
+                    )
+                ),
+                Mission(
+                    "아이스 초코라떼 1잔과 치즈 케이크 1개를 주문해보세요",
+                    listOf(
+                        RequiredItem("초코라떼", 1, "ICE, 샷 추가"),
+                        RequiredItem("치즈 케이크", 1, "기본")
+                    )
+                ),
+                Mission(
+                    "따뜻한 카페모카 1잔, 아이스 아메리카노(얼음 추가) 1잔을 주문해보세요",
+                    listOf(
+                        RequiredItem("카페모카", 1, "HOT"),
+                        // '얼음 많이'는 데이터에 '얼음 추가'로 되어있으므로 텍스트 매칭 주의
+                        RequiredItem("아메리카노", 1, "ICE, 얼음 추가")
+                    )
+                ),
+                Mission(
+                    "아이스 아메리카노(샷 추가, 얼음 적게) 1잔, 따뜻한 아메리카노(샷추가) 1잔을 주문해보세요",
+                    listOf(RequiredItem("아메리카노", 1, "ICE, 샷 추가, 얼음 적게"),
+                        RequiredItem("아메리카노", 1, "HOT, 샷 추가"))
                 ),
                 Mission(
                     "따뜻한 카페라떼 1잔, 치즈 케이크 1개를 주문해보세요",
-                    listOf(RequiredItem("카페라떼", 1, "HOT"), RequiredItem("치즈 케이크", 1))
+                    listOf(RequiredItem("카페라떼", 1, "HOT"), RequiredItem("치즈 케이크", 1, "기본"))
                 ),
                 Mission(
                     "레몬에이드 1잔, 초코무스 케이크 1개를 주문해보세요",
-                    listOf(RequiredItem("레몬에이드", 1), RequiredItem("초코무스 케이크", 1))
+                    listOf(RequiredItem("레몬에이드", 1, "ICE Only"), RequiredItem("초코무스 케이크", 1, "기본"))
                 )
             )
             _currentMission.value = missions.random()
@@ -190,29 +231,60 @@ class CafeKioskViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     // ⚠️ 중요: 카페 미션 검증 (옵션 포함)
+    // ⚠️ 수정된 카페 미션 검증 함수 (find 제거, 순수 합산 비교)
     private fun checkMissionSuccess(mission: Mission, cart: List<CartItem>): Boolean {
-        // 1. 아이템 개수가 일치하는지 확인 (단순화된 로직)
-        if (cart.sumOf { it.quantity } != mission.required.sumOf { it.quantity }) return false
+        // 1. [전체 수량 체크] (엄격 기준: 쓸데없는 거 샀으면 실패)
+        val cartTotal = cart.sumOf { it.quantity }
+        val missionTotal = mission.required.sumOf { it.quantity }
+        if (cartTotal != missionTotal) {
+            println("❌ 전체 개수 불일치")
+            return false
+        }
 
-        // 2. 각 필수 항목이 장바구니에 존재하는지 확인
         return mission.required.all { req ->
-            val cartItem = cart.find {
-                // 이름이 같고, (옵션 요구사항이 있다면 옵션 이름도 포함되어야 함)
-                it.menuItem.name == req.name &&
-                        (req.option == null || it.selectedOption?.name?.contains(req.option) == true)
-            }
-            cartItem != null && cartItem.quantity == req.quantity
+            val reqOptionSet = req.option?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet() ?: emptySet()
+
+            println("🔎 미션 찾는 중: ${req.name} / 옵션: $reqOptionSet")
+
+            val matchingQuantity = cart.filter { item ->
+                val cartOptionSet = item.selectedOptions.map { it.name }.toSet()
+                val isMatch = (item.menuItem.name == req.name) && (reqOptionSet == cartOptionSet)
+
+                if (item.menuItem.name == req.name) {
+                    println("   - 장바구니 후보: ${item.menuItem.name} / 옵션: $cartOptionSet -> 일치여부: $isMatch")
+                }
+                isMatch
+            }.sumOf { it.quantity }
+
+            println("   👉 최종 집계 수량: $matchingQuantity / 필요 수량: ${req.quantity}")
+            matchingQuantity == req.quantity
         }
     }
-
     private fun saveHistory(mission: Mission, success: Boolean) {
         val dateFormat = SimpleDateFormat("MM.dd HH:mm", Locale.getDefault())
+
+        // 1. 장바구니 내용을 '옵션 포함'된 RequiredItem으로 변환
+        val recordedOrder = _cart.value.map { cartItem ->
+            // (1) 옵션 리스트를 문자열로 예쁘게 변환 (예: "샷 추가, 얼음 적게")
+            // "기본", "ICE Only" 같은 건 기록에도 남기기 싫다면 여기서 filter를 걸어도 됨
+            val optionString = cartItem.selectedOptions
+                .map { it.name }
+                .joinToString(", ") // 콤마로 이어 붙이기
+
+            // (2) 옵션까지 꽉 채워서 생성
+            RequiredItem(
+                name = cartItem.menuItem.name,
+                quantity = cartItem.quantity,
+                option = if (optionString.isNotEmpty()) optionString else null
+            )
+        }
+
         val record = HistoryRecord(
             id = System.currentTimeMillis().toString(),
             date = dateFormat.format(Date()),
             mission = mission.text,
             success = success,
-            userOrder = _cart.value.map { RequiredItem(it.menuItem.name, it.quantity) },
+            userOrder = recordedOrder, // 👈 수정된 리스트 저장
             timestamp = System.currentTimeMillis()
         )
         viewModelScope.launch { repository.saveHistory(record) }
