@@ -88,9 +88,9 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         // 국밥류
         MenuItem("1", "돼지국밥", 9000, "국밥류", specialOptions),  // ✅ 옵션 추가
         MenuItem("2", "순대국밥", 9000, "국밥류", specialOptions),  // ✅ 옵션 추가
-        MenuItem("3", "내장국밥", 10000, "국밥류"),
-        MenuItem("4", "섞어국밥", 11000, "국밥류"),
-        MenuItem("5", "뼈해장국", 10000, "국밥류"),
+        MenuItem("3", "뼈해장국", 10000, "국밥류"),
+        MenuItem("4", "육개장", 11000, "국밥류"),
+        MenuItem("5", "뚝배기불고기", 12000, "국밥류"),
 
         // 사이드
         MenuItem("11", "순대 모듬", 15000, "사이드"),

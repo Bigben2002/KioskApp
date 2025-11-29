@@ -40,6 +40,10 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.window.Dialog
 import com.example.kiosk.data.model.ItemOption
 import com.example.kiosk.ui.components.OptionDialog
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import com.example.kiosk.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -296,7 +300,46 @@ fun MenuList(
                             .background(Color(0xFFE5E7EB), RoundedCornerShape(8.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(defaultIcon, fontSize = 64.sp)
+                        // 실제 이미지 사용
+                        val imageRes = when (item.name) {
+                            // 국밥류
+                            "돼지국밥" -> R.drawable.dwaeji_gukbap
+                            "순대국밥" -> R.drawable.sundae_gukbap
+                            "뼈해장국" -> R.drawable.ppyeo_haejangguk
+                            "육개장" -> R.drawable.yukgaejang
+                            "뚝배기불고기" -> R.drawable.ttukbaegi_bulgogi
+
+                            // 사이드
+                            "순대 모듬" -> R.drawable.assorted_sundae
+                            "수육 (小)" -> R.drawable.sooyuk
+                            "수육 (中)" -> R.drawable.sooyuk
+                            "수육 (大)" -> R.drawable.sooyuk
+                            "모듬" -> R.drawable.assorted_sundae_sooyuk
+                            "김치" -> R.drawable.kimchi
+
+                            // 음료
+                            "소주" -> R.drawable.soju
+                            "맥주" -> R.drawable.beer
+                            "콜라" -> R.drawable.cola
+                            "사이다" -> R.drawable.cider
+                            "탄산수" -> R.drawable.sparkling_water
+
+                            else -> null
+                        }
+
+                        if (imageRes != null) {
+                            Image(
+                                painter = painterResource(id = imageRes),
+                                contentDescription = item.name,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(8.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        } else {
+                            // 이미지가 없으면 기본 이모티콘
+                            Text(defaultIcon, fontSize = 64.sp)
+                        }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(item.name, fontSize = 18.sp, fontWeight = FontWeight.Medium, maxLines = 1)
@@ -662,14 +705,17 @@ private fun CartItemRow(
         // 메뉴 이름과 가격
         Column(modifier = Modifier.weight(1f)) {
             Text(item.menuItem.name, fontSize = 18.sp, fontWeight = FontWeight.Medium)
-            if (item.selectedOption != null) {
+            if (item.selectedOption != null && item.selectedOption.price > 0) {  // ✅ 가격이 0보다 클 때만 표시
                 val options = item.selectedOption.name.split(", ")
                 options.forEach { opt ->
-                    Text(
-                        "  • $opt",  // ✅ 들여쓰기 + 불릿
-                        fontSize = 13.sp,
-                        color = Color(0xFF6B7280)  // 회색
-                    )
+                    // ✅ "보통"이나 "수육 없음" 같은 0원 옵션은 제외
+                    if (!opt.contains("보통") && !opt.contains("수육 없음")) {
+                        Text(
+                            "  • $opt",
+                            fontSize = 13.sp,
+                            color = Color(0xFF6B7280)
+                        )
+                    }
                 }
             }
             Text(
@@ -861,17 +907,35 @@ fun OrderResultScreen(
                                 .padding(vertical = 8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
+                            // ✅ 메뉴 이름과 옵션 함께 표시
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "${item.menuItem.name} × ${item.quantity}",
+                                    fontSize = 16.sp
+                                )
+                                // ✅ 옵션 표시 (가격이 0보다 클 때만)
+                                if (item.selectedOption != null && item.selectedOption.price > 0) {
+                                    val options = item.selectedOption.name.split(", ")
+                                    options.forEach { opt ->
+                                        if (!opt.contains("보통") && !opt.contains("수육 없음")) {
+                                            Text(
+                                                "  • $opt",
+                                                fontSize = 13.sp,
+                                                color = Color(0xFF6B7280)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            // ✅ 옵션 포함된 최종 가격 표시
                             Text(
-                                "${item.menuItem.name} × ${item.quantity}",
-                                fontSize = 18.sp,
-                                color = Color(0xFF374151)
-                            )
-                            Text(
-                                "${NumberFormat.getNumberInstance(Locale.KOREA).format(item.menuItem.price * item.quantity)}원",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Medium
+                                "${NumberFormat.getNumberInstance(Locale.KOREA).format(
+                                    (item.menuItem.price + (item.selectedOption?.price ?: 0)) * item.quantity
+                                )}원",
+                                fontSize = 16.sp
                             )
                         }
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
