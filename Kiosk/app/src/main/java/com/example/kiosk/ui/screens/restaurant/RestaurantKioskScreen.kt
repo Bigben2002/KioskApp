@@ -32,6 +32,11 @@ import java.util.Locale
 import com.example.kiosk.data.model.MenuItem
 import com.example.kiosk.data.model.ItemOption
 import com.example.kiosk.data.model.CartItem
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import com.example.kiosk.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,13 +56,55 @@ fun RestaurantKioskScreen(
     val orderResult by viewModel.orderResult.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
 
+    // ✅ 결제 상태 추가
+    val paymentStep by viewModel.paymentStep.collectAsState()
+
     var showOptionDialog by remember { mutableStateOf(false) }
     var selectedMenuItem by remember { mutableStateOf<MenuItem?>(null) }
 
     val themeColor = Color(0xFF8B4513) // 한성국밥 테마 색상
 
     LaunchedEffect(Unit) {
+        android.util.Log.e("RESTAURANT_INIT", "========== LaunchedEffect 실행! ==========")
+        android.util.Log.e("RESTAURANT_INIT", "isPractice: $isPractice")
         viewModel.init(isPractice)
+        android.util.Log.e("RESTAURANT_INIT", "init 완료!")
+    }
+
+    // ✅ 결제 플로우 화면들
+    when (paymentStep) {
+        PaymentStep.METHOD_SELECT -> {
+            RestaurantPaymentMethodSelectScreen(
+                onPaid = { method -> viewModel.selectPaymentMethod(method) },
+                onBack = { viewModel.cancelPayment() }
+            )
+            return
+        }
+        PaymentStep.CARD_INSERT -> {
+            RestaurantPaymentCardInsertScreen(
+                onProceed = { viewModel.proceedToProcessing() }
+            )
+            return
+        }
+        PaymentStep.QR_SCAN -> {
+            RestaurantPaymentQrScanScreen(
+                onProceed = { viewModel.proceedToProcessing() }
+            )
+            return
+        }
+        PaymentStep.PROCESSING -> {
+            RestaurantPaymentProcessingScreen()
+            return
+        }
+        PaymentStep.COMPLETE -> {
+            LaunchedEffect(Unit) {
+                viewModel.checkout(isPractice)
+            }
+            return
+        }
+        else -> {
+            // 일반 키오스크 화면 계속 진행
+        }
     }
 
     // 주문 결과 다이얼로그
@@ -116,7 +163,7 @@ fun RestaurantKioskScreen(
             // 왼쪽: 카테고리 영역
             Column(
                 modifier = Modifier
-                    .width(180.dp)
+                    .width(100.dp)
                     .fillMaxHeight()
                     .background(Color(0xFF6B4423))
                     .padding(vertical = 16.dp)
@@ -137,7 +184,7 @@ fun RestaurantKioskScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .background(Color.Yellow)  // ✅ 이거 추가!
+                    .background(Color.White)
                     .padding(16.dp)
             ) {
                 // 미션 또는 연습 가이드
@@ -168,15 +215,14 @@ fun RestaurantKioskScreen(
                     contentPadding = PaddingValues(8.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f)  // ✅ weight로 남은 공간 차지
+                        .weight(1f)
                 ) {
                     items(filteredMenu) { item ->
-                        android.util.Log.e("RESTAURANT_DEBUG", "MenuItemCard 렌더링: ${item.name}")
                         MenuItemCard(
                             item = item,
                             themeColor = themeColor,
                             onClick = {
-                                if (item.category == "국밥류" || item.options.isNotEmpty()) {
+                                if (item.category == "국밥류" && item.options.isNotEmpty()) {
                                     selectedMenuItem = item
                                     showOptionDialog = true
                                 } else {
@@ -192,7 +238,7 @@ fun RestaurantKioskScreen(
             // 오른쪽: 장바구니
             Column(
                 modifier = Modifier
-                    .width(340.dp)
+                    .width(120.dp)
                     .fillMaxHeight()
                     .background(Color.White)
                     .padding(20.dp)
@@ -256,7 +302,7 @@ fun RestaurantKioskScreen(
 
                 // 결제 버튼
                 Button(
-                    onClick = { viewModel.checkout(isPractice) },
+                    onClick = { viewModel.startPayment() },  // ✅ 결제 플로우 시작
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -436,7 +482,7 @@ private fun MenuItemCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // 메뉴 이미지 영역 (이모지로 대체)
+            // 메뉴 이미지 영역
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -445,14 +491,39 @@ private fun MenuItemCard(
                     .background(Color(0xFFF5F5F5)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    when (item.category) {
-                        "국밥류" -> "🍲"
-                        "사이드" -> "🥘"
-                        else -> "🥤"
-                    },
-                    fontSize = 48.sp
-                )
+                val imageRes = when (item.name) {
+                    "돼지국밥" -> R.drawable.dwaeji_gukbap
+                    "순대국밥" -> R.drawable.sundae_gukbap
+                    "뼈해장국" -> R.drawable.ppyeo_haejangguk
+                    "순대 모듬" -> R.drawable.assorted_sundae
+                    "수육 (小)", "수육 (中)", "수육 (大)" -> R.drawable.sooyuk
+                    "모듬" -> R.drawable.assorted_sundae_sooyuk
+                    "김치" -> R.drawable.kimchi
+                    "소주" -> R.drawable.soju
+                    "맥주" -> R.drawable.beer
+                    "콜라" -> R.drawable.cola
+                    "사이다" -> R.drawable.cider
+                    "탄산수" -> R.drawable.sparkling_water
+                    else -> null
+                }
+
+                if (imageRes != null) {
+                    Image(
+                        painter = painterResource(id = imageRes),
+                        contentDescription = item.name,
+                        modifier = Modifier.fillMaxSize().padding(8.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    Text(
+                        when (item.category) {
+                            "국밥류" -> "🍜"
+                            "사이드" -> "🥓"
+                            else -> "🍺"
+                        },
+                        fontSize = 48.sp
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))

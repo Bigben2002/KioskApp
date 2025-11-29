@@ -11,6 +11,17 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlinx.coroutines.delay
+
+// ✅ 파일 맨 위에 enum 추가
+enum class PaymentStep {
+    NONE,              // 결제 전
+    METHOD_SELECT,     // 결제 방식 선택
+    CARD_INSERT,       // 카드 삽입 대기
+    QR_SCAN,          // QR 스캔 대기
+    PROCESSING,       // 결제 처리 중
+    COMPLETE          // 결제 완료
+}
 
 data class RequiredItem(val name: String, val quantity: Int)
 
@@ -46,6 +57,41 @@ class RestaurantKioskViewModel(application: Application) : AndroidViewModel(appl
 
     private val _selectedCategory = MutableStateFlow("국밥류")
     val selectedCategory = _selectedCategory.asStateFlow()
+
+    // ✅ 결제 플로우 상태 추가
+    private val _paymentStep = MutableStateFlow(PaymentStep.NONE)
+    val paymentStep = _paymentStep.asStateFlow()
+
+    private val _selectedPaymentMethod = MutableStateFlow<String?>(null)
+    val selectedPaymentMethod = _selectedPaymentMethod.asStateFlow()
+
+    // ✅ 결제 플로우 시작
+    fun startPayment() {
+        _paymentStep.value = PaymentStep.METHOD_SELECT
+    }
+
+    // ✅ 결제 방식 선택
+    fun selectPaymentMethod(method: String) {
+        _selectedPaymentMethod.value = method
+        _paymentStep.value = when (method) {
+            "CARD" -> PaymentStep.CARD_INSERT
+            "QR" -> PaymentStep.QR_SCAN
+            else -> PaymentStep.METHOD_SELECT
+        }
+    }
+
+    fun proceedToProcessing() {
+        viewModelScope.launch {
+            processPayment()
+        }
+    }
+
+    // ✅ 결제 처리
+    private suspend fun processPayment() {
+        _paymentStep.value = PaymentStep.PROCESSING
+        delay(2000) // 결제 처리 시뮬레이션
+        _paymentStep.value = PaymentStep.COMPLETE
+    }
 
     fun setPracticeStep(step: Int) {
         _practiceStep.value = step
@@ -90,11 +136,23 @@ class RestaurantKioskViewModel(application: Application) : AndroidViewModel(appl
     val categories = listOf("국밥류", "사이드", "음료")
 
     fun init(isPractice: Boolean) {
+        android.util.Log.e("RESTAURANT_VM", "========== ViewModel init 시작! ==========")
+        android.util.Log.e("RESTAURANT_VM", "isPractice: $isPractice")
+
         _cart.value = emptyList()
         _totalPrice.value = 0
         _orderResult.value = null
         _practiceStep.value = if (isPractice) 0 else -1
         _selectedCategory.value = "국밥류"
+
+        android.util.Log.e("RESTAURANT_VM", "메뉴 개수: ${menuItems.size}")
+        android.util.Log.e("RESTAURANT_VM", "선택된 카테고리: ${_selectedCategory.value}")
+
+        val filteredMenu = menuItems.filter { it.category == _selectedCategory.value }
+        android.util.Log.e("RESTAURANT_VM", "필터된 메뉴 개수: ${filteredMenu.size}")
+        filteredMenu.forEach {
+            android.util.Log.e("RESTAURANT_VM", "메뉴: ${it.name}, 카테고리: ${it.category}")
+        }
 
         if (!isPractice) {
             val missions = listOf(
@@ -111,6 +169,8 @@ class RestaurantKioskViewModel(application: Application) : AndroidViewModel(appl
         } else {
             _currentMission.value = null
         }
+
+        android.util.Log.e("RESTAURANT_VM", "init 완료!")
     }
 
     fun startPractice() {
@@ -176,6 +236,7 @@ class RestaurantKioskViewModel(application: Application) : AndroidViewModel(appl
         }
     }
 
+    // ✅ 기존 checkout 함수 수정
     fun checkout(isPractice: Boolean) {
         val mission = _currentMission.value
         if (!isPractice && mission != null) {
@@ -185,9 +246,16 @@ class RestaurantKioskViewModel(application: Application) : AndroidViewModel(appl
         } else {
             _orderResult.value = "complete"
         }
-        if (isPractice && _practiceStep.value == 3) {
-            _practiceStep.value = 4
-        }
+
+        // ✅ 결제 상태 초기화
+        _paymentStep.value = PaymentStep.NONE
+        _selectedPaymentMethod.value = null
+    }
+
+    // ✅ 결제 취소
+    fun cancelPayment() {
+        _paymentStep.value = PaymentStep.NONE
+        _selectedPaymentMethod.value = null
     }
 
     private fun checkMissionSuccess(mission: Mission, cart: List<CartItem>): Boolean {

@@ -62,6 +62,15 @@ fun KioskSimulatorScreen(
         return
     }
 
+    // ✅ 국밥집 분기 추가!
+    if (kioskType == KioskType.RESTAURANT) {
+        com.example.kiosk.ui.screens.restaurant.RestaurantKioskScreen(
+            isPractice = isPracticeMode,
+            onBack = onExit
+        )
+        return
+    }
+
     val cart by viewModel.cart.collectAsState()
     val totalPrice by viewModel.totalPrice.collectAsState()
     val currentMission by viewModel.currentMission.collectAsState()
@@ -908,9 +917,8 @@ fun OrderResultScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-//<<<<<<< HEAD
+                            // ✅ 메뉴 이름과 옵션 (동료 코드 + 내 필터링)
                             Column(modifier = Modifier.weight(1f)) {
-                                // 1. 메뉴 이름
                                 Text(
                                     "${item.menuItem.name} × ${item.quantity}",
                                     fontSize = 18.sp,
@@ -918,56 +926,47 @@ fun OrderResultScreen(
                                     fontWeight = FontWeight.Medium
                                 )
 
-                                // 2. 옵션 표시 (이제 Column 안에 있어서 이름 아래로 내려갑니다)
+                                // ✅ 옵션 표시 (동료의 selectedOptions 체크 + 내 필터링)
                                 if (item.selectedOptions.isNotEmpty()) {
-                                    val optionStr =
-                                        item.selectedOptions.joinToString(", ") { it.name }
-                                    Text(
-                                        text = "└ $optionStr",
-                                        fontSize = 14.sp,
-                                        color = Color.Gray,
-                                        modifier = Modifier.padding(top = 2.dp) // 살짝 간격 줌
-                                    )
+                                    item.selectedOptions.forEach { opt ->
+                                        // ✅ "보통", "수육 없음" 제외
+                                        if (opt.price > 0 && !opt.name.contains("보통") && !opt.name.contains("수육 없음")) {
+                                            Text(
+                                                text = "  • ${opt.name}",
+                                                fontSize = 14.sp,
+                                                color = Color.Gray,
+                                                modifier = Modifier.padding(top = 2.dp)
+                                            )
+                                        }
+                                    }
                                 } else if (item.selectedOption != null) {
-                                    Text(
-                                        text = "└ ${item.selectedOption.name}",
-                                        fontSize = 14.sp,
-                                        color = Color.Gray,
-                                        modifier = Modifier.padding(top = 2.dp)
-                                    )
+                                    // ✅ 단일 옵션 처리 (내 코드)
+                                    if (item.selectedOption.price > 0) {
+                                        val options = item.selectedOption.name.split(", ")
+                                        options.forEach { opt ->
+                                            if (!opt.contains("보통") && !opt.contains("수육 없음")) {
+                                                Text(
+                                                    text = "  • $opt",
+                                                    fontSize = 14.sp,
+                                                    color = Color.Gray,
+                                                    modifier = Modifier.padding(top = 2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
-//=======
-//                            // ✅ 메뉴 이름과 옵션 함께 표시
-//                            Column(modifier = Modifier.weight(1f)) {
-//                                Text(
-//                                    "${item.menuItem.name} × ${item.quantity}",
-//                                    fontSize = 16.sp
-//                                )
-//                                // ✅ 옵션 표시 (가격이 0보다 클 때만)
-//                                if (item.selectedOption != null && item.selectedOption.price > 0) {
-//                                    val options = item.selectedOption.name.split(", ")
-//                                    options.forEach { opt ->
-//                                        if (!opt.contains("보통") && !opt.contains("수육 없음")) {
-//                                            Text(
-//                                                "  • $opt",
-//                                                fontSize = 13.sp,
-//                                                color = Color(0xFF6B7280)
-//                                            )
-//                                        }
-//                                    }
-//                                }
-//                            }
-//                            // ✅ 옵션 포함된 최종 가격 표시
-//                            Text(
-//                                "${NumberFormat.getNumberInstance(Locale.KOREA).format(
-//                                    (item.menuItem.price + (item.selectedOption?.price ?: 0)) * item.quantity
-//                                )}원",
-//                                fontSize = 16.sp
-//                            )
-//>>>>>>> work
+
+                            // ✅ 가격 표시 (내 코드 - 이게 빠져있었음!)
+                            Text(
+                                "${NumberFormat.getNumberInstance(Locale.KOREA).format(
+                                    (item.menuItem.price + (item.selectedOption?.price ?: 0)) * item.quantity
+                                )}원",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF374151)
+                            )
                         }
-//                        Spacer(modifier = Modifier.height(8.dp))
                     }
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
@@ -987,8 +986,7 @@ fun OrderResultScreen(
                     }
                 }
             }
-
-            // 하단 버튼
+            // ✅ 하단 버튼 (주석 해제!)
             Button(
                 onClick = onExit,
                 modifier = Modifier
@@ -999,7 +997,6 @@ fun OrderResultScreen(
             ) {
                 Text("처음으로", fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
-
             Spacer(modifier = Modifier.height(24.dp))
         }
     }

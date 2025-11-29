@@ -19,6 +19,7 @@ import com.example.kiosk.ui.screens.cinema.CinemaFlowRoot
 import com.example.kiosk.ui.screens.cinema.real.CinemaRealFlowRoot
 import com.example.kiosk.ui.screens.main.MainMenuScreen
 import com.example.kiosk.ui.screens.main.PracticeKioskSelectScreen
+import com.example.kiosk.ui.screens.restaurant.RestaurantKioskScreen
 import com.example.kiosk.ui.theme.KioskTheme
 import com.google.firebase.FirebaseApp
 
@@ -90,7 +91,6 @@ fun KioskApp() {
                     )
                 }
                 KioskType.CINEMA -> {
-                    // 🎬 [유지] 영화관 연습 모드
                     CinemaFlowRoot(
                         isPracticeMode = true,
                         onExit = { currentScreen = ScreenState.MENU }
@@ -100,6 +100,13 @@ fun KioskApp() {
                     CafeKioskScreen(
                         isPracticeMode = true,
                         onExit = { currentScreen = ScreenState.MENU }
+                    )
+                }
+                // ✅ 국밥집 추가
+                KioskType.RESTAURANT -> {
+                    RestaurantKioskScreen(
+                        isPractice = true,
+                        onBack = { currentScreen = ScreenState.MENU }
                     )
                 }
                 else -> {
@@ -116,27 +123,30 @@ fun KioskApp() {
             // 실전 모드 분기
             when (currentKioskType) {
                 KioskType.BURGER -> {
-                    // (기존 코드 유지)
                     BurgerKioskScreen(
                         isPracticeMode = false,
                         onExit = { currentScreen = ScreenState.MENU }
                     )
                 }
                 KioskType.CINEMA -> {
-                    // 🎬 [수정됨] 영화관 실전 모드는 전용 Composable(CinemaRealFlowRoot) 사용
                     CinemaRealFlowRoot(
                         onExit = { currentScreen = ScreenState.MENU }
                     )
                 }
                 KioskType.CAFE -> {
-                    // (기존 코드 유지)
                     CafeKioskScreen(
                         isPracticeMode = false,
                         onExit = { currentScreen = ScreenState.MENU }
                     )
                 }
+                // ✅ 국밥집 추가
+                KioskType.RESTAURANT -> {
+                    RestaurantKioskScreen(
+                        isPractice = false,
+                        onBack = { currentScreen = ScreenState.MENU }
+                    )
+                }
                 else -> {
-                    // (기존 코드 유지)
                     KioskSimulatorScreen(
                         isPracticeMode = false,
                         kioskType = currentKioskType,
