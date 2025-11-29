@@ -38,6 +38,7 @@ import java.text.NumberFormat
 import java.util.Locale
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.window.Dialog
+import com.example.kiosk.data.model.ItemOption
 import com.example.kiosk.ui.components.OptionDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -172,15 +173,54 @@ fun KioskSimulatorScreen(
             }
         }
         if (selectedMenuItemForOption != null) {
-            OptionDialog(
-                menuItem = selectedMenuItemForOption!!,
-                themeColor = kioskType.themeColor,
-                onDismiss = { selectedMenuItemForOption = null },
-                onAddToCart = { selectedOption ->
-                    viewModel.addToCart(selectedMenuItemForOption!!, isPracticeMode, selectedOption)
-                    selectedMenuItemForOption = null // 팝업 닫기
-                }
-            )
+            // ✅ 국밥집일 때만 RestaurantOptionDialog 사용
+            if (kioskType == KioskType.RESTAURANT) {
+                com.example.kiosk.ui.screens.restaurant.RestaurantOptionDialog(
+                    menuItem = selectedMenuItemForOption!!,
+                    themeColor = kioskType.themeColor,
+                    onDismiss = { selectedMenuItemForOption = null },
+                    onAddToCart = { item, option, porkOption ->
+                        android.util.Log.e("CART_DEBUG", "=== 장바구니 추가 시작 ===")
+                        android.util.Log.e("CART_DEBUG", "메뉴: ${item.name}")
+                        android.util.Log.e("CART_DEBUG", "옵션: ${option?.name}, 가격: ${option?.price}")
+                        android.util.Log.e("CART_DEBUG", "수육옵션: ${porkOption?.name}, 가격: ${porkOption?.price}")
+                        // ✅ 두 옵션을 합친 새로운 옵션 생성
+                        val combinedOption = if (porkOption != null && porkOption.price > 0) {
+                            val optionName = buildString {
+                                if (option != null && option.price > 0) {
+                                    append(option.name)
+                                    append(", ")
+                                }
+                                append(porkOption.name)
+                            }
+                            val optionPrice = (option?.price ?: 0) + porkOption.price
+                            ItemOption(optionName, optionPrice)
+                        } else {
+                            option
+                        }
+
+                        android.util.Log.e("CART_DEBUG", "합친 옵션 이름: ${combinedOption?.name}")
+                        android.util.Log.e("CART_DEBUG", "합친 옵션 가격: ${combinedOption?.price}")
+
+                        viewModel.addToCart(item, isPracticeMode, combinedOption)
+                        selectedMenuItemForOption = null
+                    }
+                )
+            } else {
+                OptionDialog(
+                    menuItem = selectedMenuItemForOption!!,
+                    themeColor = kioskType.themeColor,
+                    onDismiss = { selectedMenuItemForOption = null },
+                    onAddToCart = { selectedOption ->
+                        viewModel.addToCart(
+                            selectedMenuItemForOption!!,
+                            isPracticeMode,
+                            selectedOption
+                        )
+                        selectedMenuItemForOption = null // 팝업 닫기
+                    }
+                )
+            }
         }
     }
     if (showCartDialog) {
@@ -623,11 +663,14 @@ private fun CartItemRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(item.menuItem.name, fontSize = 18.sp, fontWeight = FontWeight.Medium)
             if (item.selectedOption != null) {
-                Text(
-                    "(${item.selectedOption.name})",
-                    fontSize = 14.sp,
-                    color = Color(0xFF2563EB)
-                ) // 파란색 등으로 강조
+                val options = item.selectedOption.name.split(", ")
+                options.forEach { opt ->
+                    Text(
+                        "  • $opt",  // ✅ 들여쓰기 + 불릿
+                        fontSize = 13.sp,
+                        color = Color(0xFF6B7280)  // 회색
+                    )
+                }
             }
             Text(
                 "${NumberFormat.getNumberInstance(Locale.KOREA).format((item.menuItem.price + (item.selectedOption?.price ?: 0)) * item.quantity)}원",

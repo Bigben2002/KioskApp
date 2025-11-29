@@ -32,7 +32,11 @@ fun RestaurantOptionDialog(
         )
     }
 
-    var selectedPorkOption by remember { mutableStateOf<ItemOption?>(null) }
+    val porkOptions = listOf(
+        ItemOption("수육 없음", 0),
+        ItemOption("수육 추가 (+5,000원)", 5000)
+    )
+    var selectedPorkOption by remember { mutableStateOf(porkOptions[0]) }  // 기본값: 수육 없음
 
     val isGukbap = menuItem.category == "국밥류"
 
@@ -73,18 +77,13 @@ fun RestaurantOptionDialog(
                     Text("수육 추가", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    val porkOptions = listOf(
-                        ItemOption("수육 없음", 0),
-                        ItemOption("수육 추가 (+5,000원)", 5000)
-                    )
-
                     porkOptions.forEach { option ->
                         OptionRow(
                             option = option,
                             isSelected = option == selectedPorkOption,
                             themeColor = themeColor,
                             onClick = {
-                                selectedPorkOption = if (selectedPorkOption == option) null else option
+                                selectedPorkOption = option  // ✅ 무조건 선택, 토글 안 함
                             }
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -118,6 +117,13 @@ fun RestaurantOptionDialog(
                         val specialPrice = selectedSpecialOption?.price ?: 0
                         val porkPrice = selectedPorkOption?.price ?: 0
                         val finalPrice = menuItem.price + specialPrice + porkPrice
+
+                        android.util.Log.e("OPTION_DEBUG", "메뉴 가격: ${menuItem.price}")
+                        android.util.Log.e("OPTION_DEBUG", "특 가격: $specialPrice")
+                        android.util.Log.e("OPTION_DEBUG", "수육 가격: $porkPrice")
+                        android.util.Log.e("OPTION_DEBUG", "최종 가격: $finalPrice")
+                        android.util.Log.e("OPTION_DEBUG", "selectedPorkOption: $selectedPorkOption")
+
                         Text("${NumberFormat.getNumberInstance(Locale.KOREA).format(finalPrice)}원 담기")
                     }
                 }

@@ -71,29 +71,41 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         MenuItem("c6", "치즈케이크", 5500, "디저트")
     )
 
+    // ✅ 특 옵션 정의 (돼지국밥, 순대국밥용)
+    private val specialOptions = listOf(
+        ItemOption("보통", 0),
+        ItemOption("특 (+1,000원)", 1000)
+    )
+
+    // ✅ 수육 추가 옵션 정의 (모든 국밥류용)
+    private val porkOptions = listOf(
+        ItemOption("수육 없음", 0),
+        ItemOption("수육 추가 (+5,000원)", 5000)
+    )
+
     // ✅ 국밥집 메뉴 추가!
     private val restaurantItems = listOf(
         // 국밥류
-        MenuItem("r1", "돼지국밥", 9000, "국밥류"),
-        MenuItem("r2", "순대국밥", 9000, "국밥류"),
-        MenuItem("r3", "내장국밥", 10000, "국밥류"),
-        MenuItem("r4", "섞어국밥", 11000, "국밥류"),
-        MenuItem("r5", "뼈해장국", 10000, "국밥류"),
+        MenuItem("1", "돼지국밥", 9000, "국밥류", specialOptions),  // ✅ 옵션 추가
+        MenuItem("2", "순대국밥", 9000, "국밥류", specialOptions),  // ✅ 옵션 추가
+        MenuItem("3", "내장국밥", 10000, "국밥류"),
+        MenuItem("4", "섞어국밥", 11000, "국밥류"),
+        MenuItem("5", "뼈해장국", 10000, "국밥류"),
 
         // 사이드
-        MenuItem("r11", "순대 모듬", 15000, "사이드"),
-        MenuItem("r12", "수육 (小)", 15000, "사이드"),
-        MenuItem("r13", "수육 (中)", 20000, "사이드"),
-        MenuItem("r14", "수육 (大)", 25000, "사이드"),
-        MenuItem("r15", "모듬", 20000, "사이드"),
-        MenuItem("r16", "김치", 3000, "사이드"),
+        MenuItem("11", "순대 모듬", 15000, "사이드"),
+        MenuItem("12", "수육 (小)", 15000, "사이드"),
+        MenuItem("13", "수육 (中)", 20000, "사이드"),
+        MenuItem("14", "수육 (大)", 25000, "사이드"),
+        MenuItem("15", "모듬", 20000, "사이드"),
+        MenuItem("16", "김치", 3000, "사이드"),
 
         // 음료
-        MenuItem("r21", "소주", 4000, "음료"),
-        MenuItem("r22", "맥주", 4500, "음료"),
-        MenuItem("r23", "콜라", 2000, "음료"),
-        MenuItem("r24", "사이다", 2000, "음료"),
-        MenuItem("r25", "탄산수", 1500, "음료")
+        MenuItem("21", "소주", 4000, "음료"),
+        MenuItem("22", "맥주", 4500, "음료"),
+        MenuItem("23", "콜라", 2000, "음료"),
+        MenuItem("24", "사이다", 2000, "음료"),
+        MenuItem("25", "탄산수", 1500, "음료")
     )
 
     // === 2. 미션 데이터 분리 ===
