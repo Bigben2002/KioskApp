@@ -84,8 +84,7 @@ fun PracticeKioskSelectScreen(
                 SelectCard(
                     type = KioskType.RESTAURANT,
                     onClick = onSelect,
-                    modifier = Modifier.weight(1f),
-                    disabled = true
+                    modifier = Modifier.weight(1f)
                 )
             }
 

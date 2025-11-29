@@ -71,6 +71,43 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         MenuItem("c6", "치즈케이크", 5500, "디저트")
     )
 
+    // ✅ 특 옵션 정의 (돼지국밥, 순대국밥용)
+    private val specialOptions = listOf(
+        ItemOption("보통", 0),
+        ItemOption("특 (+1,000원)", 1000)
+    )
+
+    // ✅ 수육 추가 옵션 정의 (모든 국밥류용)
+    private val porkOptions = listOf(
+        ItemOption("수육 없음", 0),
+        ItemOption("수육 추가 (+5,000원)", 5000)
+    )
+
+    // ✅ 국밥집 메뉴 추가!
+    private val restaurantItems = listOf(
+        // 국밥류
+        MenuItem("1", "돼지국밥", 9000, "국밥류", specialOptions),  // ✅ 옵션 추가
+        MenuItem("2", "순대국밥", 9000, "국밥류", specialOptions),  // ✅ 옵션 추가
+        MenuItem("3", "뼈해장국", 10000, "국밥류"),
+        MenuItem("4", "육개장", 11000, "국밥류"),
+        MenuItem("5", "뚝배기불고기", 12000, "국밥류"),
+
+        // 사이드
+        MenuItem("11", "순대 모듬", 15000, "사이드"),
+        MenuItem("12", "수육 (小)", 15000, "사이드"),
+        MenuItem("13", "수육 (中)", 20000, "사이드"),
+        MenuItem("14", "수육 (大)", 25000, "사이드"),
+        MenuItem("15", "모듬", 20000, "사이드"),
+        MenuItem("16", "김치", 3000, "사이드"),
+
+        // 음료
+        MenuItem("21", "소주", 4000, "음료"),
+        MenuItem("22", "맥주", 4500, "음료"),
+        MenuItem("23", "콜라", 2000, "음료"),
+        MenuItem("24", "사이다", 2000, "음료"),
+        MenuItem("25", "탄산수", 1500, "음료")
+    )
+
     // === 2. 미션 데이터 분리 ===
     private val burgerMissions = listOf(
         Mission(
@@ -102,6 +139,26 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         )
     )
 
+    // ✅ 국밥집 미션 추가!
+    private val restaurantMissions = listOf(
+        Mission(
+            "돼지국밥 2개, 수육 (小) 1개를 주문해보세요",
+            listOf(RequiredItem("돼지국밥", 2), RequiredItem("수육 (小)", 1))
+        ),
+        Mission(
+            "순대국밥 1개, 소주 2병을 주문해보세요",
+            listOf(RequiredItem("순대국밥", 1), RequiredItem("소주", 2))
+        ),
+        Mission(
+            "섞어국밥 1개, 순대 모듬 1개, 맥주 1병을 주문해보세요",
+            listOf(RequiredItem("섞어국밥", 1), RequiredItem("순대 모듬", 1), RequiredItem("맥주", 1))
+        ),
+        Mission(
+            "내장국밥 2개, 김치 1개를 주문해보세요",
+            listOf(RequiredItem("내장국밥", 2), RequiredItem("김치", 1))
+        )
+    )
+
     // === 3. 초기화 함수 수정 (타입 전달받음) ===
     fun init(isPractice: Boolean, type: KioskType) {
         currentType = type
@@ -114,8 +171,9 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             val missions = when (type) {
                 KioskType.BURGER -> burgerMissions
                 KioskType.CAFE -> cafeMissions
+                KioskType.RESTAURANT -> restaurantMissions
                 // ✅ 영화관/식당은 시연 중심(미션 없음)
-                KioskType.CINEMA, KioskType.RESTAURANT -> emptyList()
+                KioskType.CINEMA -> emptyList()
             }
             _currentMission.value = missions.randomOrNull()
         } else {
@@ -127,8 +185,9 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         return when (currentType) {
             KioskType.BURGER -> burgerItems
             KioskType.CAFE -> cafeItems
+            KioskType.RESTAURANT -> restaurantItems  // ✅ 국밥집 메뉴 반환!
             // ✅ 단계형 UI: 메뉴 없음
-            KioskType.CINEMA, KioskType.RESTAURANT -> emptyList()
+            KioskType.CINEMA -> emptyList()
         }
     }
 
