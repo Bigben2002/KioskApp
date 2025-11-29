@@ -48,6 +48,15 @@ fun KioskSimulatorScreen(
     onExit: () -> Unit,
     viewModel: KioskViewModel = viewModel()
 ) {
+    // ✅ 새로 추가: 영화관이면 기존 버거/카페 UI를 건너뛰고 전용 루트로 이동
+    if (kioskType == KioskType.CINEMA) {
+        com.example.kiosk.ui.screens.cinema.CinemaFlowRoot(
+            isPracticeMode = isPracticeMode,
+            onExit = onExit
+        )
+        return
+    }
+
     val cart by viewModel.cart.collectAsState()
     val totalPrice by viewModel.totalPrice.collectAsState()
     val currentMission by viewModel.currentMission.collectAsState()
@@ -183,15 +192,6 @@ fun KioskSimulatorScreen(
             onUpdateQty = viewModel::updateQuantity,
             onCheckout = { showCartDialog = false; viewModel.checkout(isPracticeMode) }
         )
-    }
-
-    // ✅ 새로 추가: 영화관이면 기존 버거/카페 UI를 건너뛰고 전용 루트로 이동
-    if (kioskType == KioskType.CINEMA) {
-        com.example.kiosk.ui.screens.cinema.CinemaFlowRoot(
-            isPracticeMode = isPracticeMode,
-            onExit = onExit
-        )
-        return
     }
 }
 

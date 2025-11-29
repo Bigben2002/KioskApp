@@ -28,6 +28,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.text.NumberFormat
 import java.util.Locale
+// ✅ 추가!
+import com.example.kiosk.data.model.MenuItem
+import com.example.kiosk.data.model.ItemOption
+import com.example.kiosk.data.model.CartItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +40,10 @@ fun RestaurantKioskScreen(
     onBack: () -> Unit,
     viewModel: RestaurantKioskViewModel = viewModel()
 ) {
+
+    android.util.Log.e("RESTAURANT_DEBUG", "========== RestaurantKioskScreen 실행됨! ==========")
+    android.util.Log.e("RESTAURANT_DEBUG", "menuItems 개수: ${viewModel.menuItems.size}")
+
     val cart by viewModel.cart.collectAsState()
     val totalPrice by viewModel.totalPrice.collectAsState()
     val currentMission by viewModel.currentMission.collectAsState()
@@ -129,6 +137,7 @@ fun RestaurantKioskScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
+                    .background(Color.Yellow)  // ✅ 이거 추가!
                     .padding(16.dp)
             ) {
                 // 미션 또는 연습 가이드
@@ -143,13 +152,26 @@ fun RestaurantKioskScreen(
                 // 메뉴 그리드
                 val filteredMenu = viewModel.menuItems.filter { it.category == selectedCategory }
 
+                Text(
+                    "전체 메뉴: ${viewModel.menuItems.size}, 필터됨: ${filteredMenu.size}",
+                    modifier = Modifier.padding(8.dp),
+                    fontSize = 14.sp,
+                    color = Color.Red,
+                    fontWeight = FontWeight.Bold
+                )
+
+                // ✅ 여기가 핵심! LazyVerticalGrid에 명확한 높이를 줍니다
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f)
+                    contentPadding = PaddingValues(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)  // ✅ weight로 남은 공간 차지
                 ) {
                     items(filteredMenu) { item ->
+                        android.util.Log.e("RESTAURANT_DEBUG", "MenuItemCard 렌더링: ${item.name}")
                         MenuItemCard(
                             item = item,
                             themeColor = themeColor,
@@ -374,6 +396,9 @@ private fun MenuItemCard(
     onClick: () -> Unit,
     showGuide: Boolean
 ) {
+    // ✅ 이 로그 추가!
+    android.util.Log.e("RESTAURANT_DEBUG", "MenuItemCard 렌더링: ${item.name}")
+
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val scale by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -472,16 +497,16 @@ private fun CartItemRow(
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
-            if (cartItem.option != null && cartItem.option.priceDelta > 0) {
+            if (cartItem.selectedOption != null && cartItem.selectedOption.price > 0) {
                 Text(
-                    "(${cartItem.option.name})",
+                    "(${cartItem.selectedOption.name})",
                     fontSize = 12.sp,
                     color = Color.Gray
                 )
             }
             Text(
                 "${NumberFormat.getNumberInstance(Locale.KOREA).format(
-                    (cartItem.menuItem.price + (cartItem.option?.priceDelta ?: 0)) * cartItem.quantity
+                    (cartItem.menuItem.price + (cartItem.selectedOption?.price ?: 0)) * cartItem.quantity
                 )}원",
                 fontSize = 14.sp,
                 color = themeColor

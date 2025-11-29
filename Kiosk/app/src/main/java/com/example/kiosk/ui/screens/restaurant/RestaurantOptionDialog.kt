@@ -16,6 +16,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import java.text.NumberFormat
 import java.util.Locale
+import com.example.kiosk.data.model.MenuItem
+import com.example.kiosk.data.model.ItemOption
 
 @Composable
 fun RestaurantOptionDialog(
@@ -24,14 +26,12 @@ fun RestaurantOptionDialog(
     onDismiss: () -> Unit,
     onAddToCart: (MenuItem, ItemOption?, ItemOption?) -> Unit
 ) {
-    // 특 옵션 (돼지국밥, 순대국밥만)
     var selectedSpecialOption by remember {
         mutableStateOf(
             if (menuItem.options.isNotEmpty()) menuItem.options.first() else null
         )
     }
 
-    // 수육 추가 옵션 (모든 국밥류에 가능)
     var selectedPorkOption by remember { mutableStateOf<ItemOption?>(null) }
 
     val isGukbap = menuItem.category == "국밥류"
@@ -74,8 +74,8 @@ fun RestaurantOptionDialog(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     val porkOptions = listOf(
-                        ItemOption("no_pork", "수육 없음", 0),
-                        ItemOption("add_pork", "수육 추가 (+5,000원)", 5000)
+                        ItemOption("수육 없음", 0),
+                        ItemOption("수육 추가 (+5,000원)", 5000)
                     )
 
                     porkOptions.forEach { option ->
@@ -115,8 +115,8 @@ fun RestaurantOptionDialog(
                         colors = ButtonDefaults.buttonColors(containerColor = themeColor),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        val specialPrice = selectedSpecialOption?.priceDelta ?: 0
-                        val porkPrice = if (selectedPorkOption?.id == "add_pork") 5000 else 0
+                        val specialPrice = selectedSpecialOption?.price ?: 0
+                        val porkPrice = selectedPorkOption?.price ?: 0
                         val finalPrice = menuItem.price + specialPrice + porkPrice
                         Text("${NumberFormat.getNumberInstance(Locale.KOREA).format(finalPrice)}원 담기")
                     }
@@ -152,9 +152,9 @@ private fun OptionRow(
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             color = if (isSelected) themeColor else Color.Black
         )
-        if (option.priceDelta > 0) {
+        if (option.price > 0) {
             Text(
-                "+${NumberFormat.getNumberInstance(Locale.KOREA).format(option.priceDelta)}원",
+                "+${NumberFormat.getNumberInstance(Locale.KOREA).format(option.price)}원",
                 color = Color.Gray,
                 fontSize = 14.sp
             )
