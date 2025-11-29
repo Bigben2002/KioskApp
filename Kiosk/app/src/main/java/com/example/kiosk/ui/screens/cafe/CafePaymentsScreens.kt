@@ -1,16 +1,11 @@
 package com.example.kiosk.ui.screens.cafe
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CreditCard
-import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.SimCard
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,17 +22,18 @@ import java.util.Locale
 import java.text.SimpleDateFormat
 import java.util.Date
 
-// 카페 테마 색상
+// [해석] 카페 전용 테마 색상 (갈색) 정의
 private val CafeThemeColor = Color(0xFF6F4E37)
 
 // ------------------------------------------------------------
-// 1. 결제 방식 선택 화면 (카페 버전)
+// 1. 결제 방식 선택 화면 (카드 or QR)
 // ------------------------------------------------------------
 @Composable
 fun CafePaymentMethodSelectScreen(
-    onPaid: (String) -> Unit,
-    onBack: () -> Unit
+    onPaid: (String) -> Unit, // 결제하기 버튼 누르면 실행될 함수
+    onBack: () -> Unit        // 이전 버튼 누르면 실행될 함수
 ) {
+    // [해석] 현재 선택된 결제 방식 저장 (null이면 미선택)
     var method by remember { mutableStateOf<String?>(null) }
 
     Column(Modifier.fillMaxSize().padding(24.dp)) {
@@ -47,6 +43,7 @@ fun CafePaymentMethodSelectScreen(
         Text("결제 수단을 선택해주세요", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black)
         Spacer(Modifier.height(24.dp))
 
+        // [해석] 카드와 QR 버튼을 가로로 배치
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Box(Modifier.weight(1f)) {
                 PaymentMethodCard("신용카드", Icons.Default.CreditCard, method == "CARD") { method = "CARD" }
@@ -58,6 +55,7 @@ fun CafePaymentMethodSelectScreen(
 
         Spacer(Modifier.weight(1f))
 
+        // [해석] 하단 버튼 영역 (이전 / 결제하기)
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(
                 onClick = onBack,
@@ -69,11 +67,11 @@ fun CafePaymentMethodSelectScreen(
 
             Button(
                 onClick = { onPaid(method!!) },
-                enabled = method != null,
+                enabled = method != null, // [해석] 선택 안하면 비활성화
                 modifier = Modifier.weight(1f).height(60.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = CafeThemeColor,
-                    disabledContainerColor = Color(0xFFD1D5DB)
+                    disabledContainerColor = Color(0xFFD1D5DB) // 비활성일 때 회색
                 )
             ) {
                 Text("결제하기", fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -82,6 +80,7 @@ fun CafePaymentMethodSelectScreen(
     }
 }
 
+// [해석] 결제 수단 선택 버튼을 그리는 재사용 컴포넌트
 @Composable
 private fun PaymentMethodCard(
     title: String,
@@ -89,6 +88,7 @@ private fun PaymentMethodCard(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    // 선택되었으면 테두리와 글자가 갈색, 아니면 회색
     val borderColor = if (selected) CafeThemeColor else Color(0xFFE5E7EB)
     val backgroundColor = if (selected) CafeThemeColor.copy(alpha = 0.1f) else Color.White
     val contentColor = if (selected) CafeThemeColor else Color(0xFF374151)
@@ -125,6 +125,7 @@ fun CafePaymentQrScanScreen() {
     )
 }
 
+// [해석] 결제 처리 중 로딩 화면
 @Composable
 fun CafePaymentProcessingScreen() {
     Column(
@@ -132,6 +133,7 @@ fun CafePaymentProcessingScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        // [해석] 뱅글뱅글 돌아가는 로딩 인디케이터
         CircularProgressIndicator(modifier = Modifier.size(64.dp), color = CafeThemeColor)
         Spacer(Modifier.height(32.dp))
         Text("결제 진행 중입니다...", fontSize = 24.sp, fontWeight = FontWeight.Bold)
@@ -139,6 +141,7 @@ fun CafePaymentProcessingScreen() {
     }
 }
 
+// [해석] 아이콘 + 텍스트 형태의 단순 안내 화면 템플릿
 @Composable
 private fun GuideScreen(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
     Column(
@@ -160,25 +163,25 @@ fun CafePaymentSuccessScreen(
     cart: List<CartItem>,
     totalPrice: Int,
     diningMethod: String, // "매장" or "포장"
-    isPracticeMode: Boolean,
-    onDone: () -> Unit
+    isPracticeMode: Boolean, // 연습 모드 여부
+    onDone: () -> Unit // 확인 버튼 클릭 시 동작
 ) {
     val dateFormat = SimpleDateFormat("yyyy.MM.dd HH:mm", Locale.KOREA)
     val now = Date()
-    // 주문 번호 생성 (랜덤)
+    // [해석] 주문 번호를 100~999 사이 랜덤 생성 (화면이 다시 그려져도 숫자가 안 바뀌게 remember 사용)
     val orderNumber = remember { (100..999).random() }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState()) // 영수증이 길면 스크롤
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(100.dp))
 
-        // 체크 아이콘
+        // [해석] 상단 초록색 체크 아이콘
         Surface(shape = CircleShape, color = CafeThemeColor, modifier = Modifier.size(80.dp)) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp))
@@ -191,14 +194,14 @@ fun CafePaymentSuccessScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // 영수증 카드
+        // === 영수증 모양 카드 시작 ===
         KioskCard(
             backgroundColor = Color(0xFFF9FAFB),
             borderColor = Color(0xFFE5E7EB),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                // 주문 번호 강조
+                // 주문 번호 크게 표시
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -210,7 +213,7 @@ fun CafePaymentSuccessScreen(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-                // 주문 정보
+                // 주문 정보 (형태, 일시)
                 ReceiptRow("주문형태", diningMethod)
                 ReceiptRow("주문일시", dateFormat.format(now))
 
@@ -218,14 +221,14 @@ fun CafePaymentSuccessScreen(
                 Text("주문 내역", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // 장바구니 목록 출력
+                // [해석] 장바구니에 담긴 메뉴들을 하나씩 출력
                 cart.forEach { item ->
                     CafeReceiptItemRow(item)
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-                // 총 금액
+                // 총 금액 표시
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -241,8 +244,11 @@ fun CafePaymentSuccessScreen(
                 }
             }
         }
+        // === 영수증 카드 끝 ===
 
         Spacer(modifier = Modifier.height(32.dp))
+
+        // [해석] 연습 모드면 '처음으로', 실전이면 결과 확인하러 가기
         val buttonText = if (isPracticeMode) "처음으로 돌아가기" else "결과 확인하기"
 
         Button(
@@ -257,6 +263,7 @@ fun CafePaymentSuccessScreen(
     }
 }
 
+// [해석] 영수증 내의 한 줄 정보(라벨 + 값) 표시용 컴포넌트
 @Composable
 fun ReceiptRow(label: String, value: String) {
     Row(
@@ -268,6 +275,7 @@ fun ReceiptRow(label: String, value: String) {
     }
 }
 
+// [해석] 영수증 내의 메뉴 한 줄 표시 (옵션 포함)
 @Composable
 fun CafeReceiptItemRow(item: CartItem) {
     Row(
@@ -278,13 +286,13 @@ fun CafeReceiptItemRow(item: CartItem) {
         Column(modifier = Modifier.weight(1f)) {
             Text(item.menuItem.name, fontSize = 16.sp, fontWeight = FontWeight.Medium)
 
-            // ✅ [수정] 리스트(selectedOptions)가 있으면 내용을 보여줌
+            // ✅ [핵심] 리스트 형태의 옵션들을 문자열로 변환하여 표시
             if (item.selectedOptions.isNotEmpty()) {
-                // 예: "HOT, 샷 추가"
+                // 예: "HOT, 샷 추가, 얼음 적게" 처럼 콤마로 연결
                 val optionsString = item.selectedOptions.joinToString(", ") { it.name }
                 Text("└ $optionsString", fontSize = 14.sp, color = Color.Gray)
             }
-            // (기존 버거 호환용: 단일 옵션이 있으면 보여줌)
+            // (기존 버거 키오스크 호환용: 단일 옵션 처리)
             else if (item.selectedOption != null) {
                 Text("└ ${item.selectedOption.name}", fontSize = 14.sp, color = Color.Gray)
             }
@@ -295,7 +303,7 @@ fun CafeReceiptItemRow(item: CartItem) {
             Text("${item.quantity}개", fontSize = 16.sp, color = Color.Black)
             Spacer(modifier = Modifier.width(16.dp))
 
-            // ✅ [수정] 가격 계산도 리스트 옵션을 포함하도록 수정
+            // ✅ [핵심] 가격 계산: (기본가 + 모든 옵션 가격 합) * 수량
             val optionsPrice = item.selectedOptions.sumOf { it.price } + (item.selectedOption?.price ?: 0)
             val price = (item.menuItem.price + optionsPrice) * item.quantity
 
