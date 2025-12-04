@@ -3,6 +3,7 @@ package com.example.kiosk.ui.screens.cafe
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.kiosk.R
 import com.example.kiosk.data.model.*
 import com.example.kiosk.data.repository.HistoryRepository
 import kotlinx.coroutines.flow.*
@@ -87,20 +88,20 @@ class CafeKioskViewModel(application: Application) : AndroidViewModel(applicatio
     // 전체 메뉴 리스트 정의
     val menuItems = listOf(
         // [커피 카테고리]
-        MenuItem("c1", "아메리카노", 2000, "커피", coffeeOptions),
-        MenuItem("c2", "카페라떼", 3000, "커피", coffeeOptions),
-        MenuItem("c3", "바닐라라떼", 3500, "커피", coffeeOptions),
-        MenuItem("c4", "카페모카", 3800, "커피", coffeeOptions),
+        MenuItem("c1", "아메리카노", 2000, "커피", coffeeOptions, R.drawable.americano),
+        MenuItem("c2", "카페라떼", 3000, "커피", coffeeOptions, R.drawable.cafelatte),
+        MenuItem("c3", "바닐라라떼", 3500, "커피", coffeeOptions, R.drawable.vanillalatte),
+        MenuItem("c4", "카페모카", 3800, "커피", coffeeOptions, R.drawable.cafemocha),
 
         // [음료 카테고리]
-        MenuItem("d1", "레몬에이드", 3500, "음료", adeOptions),
-        MenuItem("d2", "아이스티", 3500, "음료", adeOptions),
-        MenuItem("d3", "초코라떼", 4500, "음료", chocoOptions),
+        MenuItem("d1", "레몬에이드", 3500, "음료", adeOptions, R.drawable.lemonade),
+        MenuItem("d2", "아이스티", 3500, "음료", adeOptions, R.drawable.icetea),
+        MenuItem("d3", "초코라떼", 4500, "음료", chocoOptions, R.drawable.chocolatelatte),
 
         // [디저트 카테고리]
-        MenuItem("k1", "초코무스 케이크",  5500, "디저트", dessertOptions),
-        MenuItem("k2", "치즈 케이크", 5500, "디저트", dessertOptions),
-        MenuItem("k3", "크로플", 3500, "디저트", dessertOptions)
+        MenuItem("k1", "초코무스 케이크",  5500, "디저트", dessertOptions, R.drawable.chocolatesmoothcake),
+        MenuItem("k2", "치즈 케이크", 5500, "디저트", dessertOptions, R.drawable.cheesecake),
+        MenuItem("k3", "크로플", 3500, "디저트", dessertOptions, R.drawable.croffle)
     )
 
     val categories = listOf("커피", "음료", "디저트")

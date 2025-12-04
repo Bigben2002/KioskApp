@@ -1,6 +1,7 @@
 package com.example.kiosk.ui.screens.cafe
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.outlined.LocalCafe
 import androidx.compose.material.icons.outlined.Store
@@ -29,6 +30,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -373,7 +376,18 @@ fun MenuList(
                             .background(Color(0xFFE5E7EB), RoundedCornerShape(8.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(defaultIcon, fontSize = 64.sp)
+                        if (item.imageResId != null) {
+                            // imageResId가 있으면 이미지를 로드하여 표시
+                            Image(
+                                painter = painterResource(id = item.imageResId!!),
+                                contentDescription = item.name,
+                                contentScale = ContentScale.Crop, // 이미지가 공간에 맞게 채워지도록 설정
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            // imageResId가 없으면 기존처럼 기본 이모지 표시
+                            Text(defaultIcon, fontSize = 64.sp)
+                        }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(item.name, fontSize = 18.sp, fontWeight = FontWeight.Medium, maxLines = 1)
