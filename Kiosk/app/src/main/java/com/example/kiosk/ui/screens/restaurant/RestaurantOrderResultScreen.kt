@@ -29,6 +29,7 @@ fun RestaurantOrderResultScreen(
     cart: List<CartItem>,
     totalPrice: Int,
     mission: Mission?,
+    viewModel: RestaurantKioskViewModel,
     onExit: () -> Unit
 ) {
     val themeColor = when (result) {
@@ -211,7 +212,10 @@ fun RestaurantOrderResultScreen(
             }
 
             Button(
-                onClick = onExit,
+                onClick = {
+                    viewModel.reset()
+                    onExit()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp),

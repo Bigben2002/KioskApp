@@ -62,11 +62,11 @@ fun KioskSimulatorScreen(
         return
     }
 
-    // ✅ 국밥집 분기 추가!
+    // 변경 후
     if (kioskType == KioskType.RESTAURANT) {
-        com.example.kiosk.ui.screens.restaurant.RestaurantKioskScreen(
-            isPractice = isPracticeMode,
-            onBack = onExit
+        com.example.kiosk.ui.screens.restaurant.RestaurantFlowRoot(
+            isPracticeMode = isPracticeMode,
+            onExit = onExit
         )
         return
     }

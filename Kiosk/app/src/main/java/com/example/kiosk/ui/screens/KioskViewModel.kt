@@ -150,12 +150,12 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             listOf(RequiredItem("순대국밥", 1), RequiredItem("소주", 2))
         ),
         Mission(
-            "섞어국밥 1개, 순대 모듬 1개, 맥주 1병을 주문해보세요",
-            listOf(RequiredItem("섞어국밥", 1), RequiredItem("순대 모듬", 1), RequiredItem("맥주", 1))
+            "뚝배기불고기 1개, 순대 모듬 1개, 맥주 1병을 주문해보세요",
+            listOf(RequiredItem("뚝배기불고기", 1), RequiredItem("순대 모듬", 1), RequiredItem("맥주", 1))
         ),
         Mission(
-            "내장국밥 2개, 김치 1개를 주문해보세요",
-            listOf(RequiredItem("내장국밥", 2), RequiredItem("김치", 1))
+            "육개장 2개, 김치 1개를 주문해보세요",
+            listOf(RequiredItem("육개장", 2), RequiredItem("김치", 1))
         )
     )
 

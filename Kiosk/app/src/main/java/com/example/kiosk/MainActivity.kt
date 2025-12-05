@@ -19,7 +19,7 @@ import com.example.kiosk.ui.screens.cinema.CinemaFlowRoot
 import com.example.kiosk.ui.screens.cinema.real.CinemaRealFlowRoot
 import com.example.kiosk.ui.screens.main.MainMenuScreen
 import com.example.kiosk.ui.screens.main.PracticeKioskSelectScreen
-import com.example.kiosk.ui.screens.restaurant.RestaurantKioskScreen
+import com.example.kiosk.ui.screens.restaurant.RestaurantFlowRoot
 import com.example.kiosk.ui.theme.KioskTheme
 import com.google.firebase.FirebaseApp
 
@@ -102,11 +102,10 @@ fun KioskApp() {
                         onExit = { currentScreen = ScreenState.MENU }
                     )
                 }
-                // ✅ 국밥집 추가
                 KioskType.RESTAURANT -> {
-                    RestaurantKioskScreen(
-                        isPractice = true,
-                        onBack = { currentScreen = ScreenState.MENU }
+                    RestaurantFlowRoot(
+                        isPracticeMode = true,
+                        onExit = { currentScreen = ScreenState.MENU }
                     )
                 }
                 else -> {
@@ -139,11 +138,10 @@ fun KioskApp() {
                         onExit = { currentScreen = ScreenState.MENU }
                     )
                 }
-                // ✅ 국밥집 추가
                 KioskType.RESTAURANT -> {
-                    RestaurantKioskScreen(
-                        isPractice = false,
-                        onBack = { currentScreen = ScreenState.MENU }
+                    RestaurantFlowRoot(
+                        isPracticeMode = false,
+                        onExit = { currentScreen = ScreenState.MENU }
                     )
                 }
                 else -> {

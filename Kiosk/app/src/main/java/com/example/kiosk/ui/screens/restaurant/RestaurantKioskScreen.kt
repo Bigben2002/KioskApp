@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -25,14 +26,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.text.NumberFormat
 import java.util.Locale
-// ✅ 추가!
 import com.example.kiosk.data.model.MenuItem
-import com.example.kiosk.data.model.ItemOption
 import com.example.kiosk.data.model.CartItem
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.ContentScale
@@ -43,78 +42,20 @@ import com.example.kiosk.R
 fun RestaurantKioskScreen(
     isPractice: Boolean,
     onBack: () -> Unit,
-    viewModel: RestaurantKioskViewModel = viewModel()
+    viewModel: RestaurantKioskViewModel = viewModel(),
+    onStartPayment: () -> Unit
 ) {
-
-    android.util.Log.e("RESTAURANT_DEBUG", "========== RestaurantKioskScreen 실행됨! ==========")
-    android.util.Log.e("RESTAURANT_DEBUG", "menuItems 개수: ${viewModel.menuItems.size}")
-
     val cart by viewModel.cart.collectAsState()
     val totalPrice by viewModel.totalPrice.collectAsState()
     val currentMission by viewModel.currentMission.collectAsState()
     val practiceStep by viewModel.practiceStep.collectAsState()
-    val orderResult by viewModel.orderResult.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
-
-    // ✅ 결제 상태 추가
-    val paymentStep by viewModel.paymentStep.collectAsState()
 
     var showOptionDialog by remember { mutableStateOf(false) }
     var selectedMenuItem by remember { mutableStateOf<MenuItem?>(null) }
+    var showCartDialog by remember { mutableStateOf(false) }
 
-    val themeColor = Color(0xFF8B4513) // 한성국밥 테마 색상
-
-    LaunchedEffect(Unit) {
-        android.util.Log.e("RESTAURANT_INIT", "========== LaunchedEffect 실행! ==========")
-        android.util.Log.e("RESTAURANT_INIT", "isPractice: $isPractice")
-        viewModel.init(isPractice)
-        android.util.Log.e("RESTAURANT_INIT", "init 완료!")
-    }
-
-    // ✅ 결제 플로우 화면들
-    when (paymentStep) {
-        PaymentStep.METHOD_SELECT -> {
-            RestaurantPaymentMethodSelectScreen(
-                onPaid = { method -> viewModel.selectPaymentMethod(method) },
-                onBack = { viewModel.cancelPayment() }
-            )
-            return
-        }
-        PaymentStep.CARD_INSERT -> {
-            RestaurantPaymentCardInsertScreen(
-                onProceed = { viewModel.proceedToProcessing() }
-            )
-            return
-        }
-        PaymentStep.QR_SCAN -> {
-            RestaurantPaymentQrScanScreen(
-                onProceed = { viewModel.proceedToProcessing() }
-            )
-            return
-        }
-        PaymentStep.PROCESSING -> {
-            RestaurantPaymentProcessingScreen()
-            return
-        }
-        PaymentStep.COMPLETE -> {
-            LaunchedEffect(Unit) {
-                viewModel.checkout(isPractice)
-            }
-            return
-        }
-        else -> {
-            // 일반 키오스크 화면 계속 진행
-        }
-    }
-
-    // 주문 결과 다이얼로그
-    if (orderResult != null) {
-        OrderResultDialog(
-            result = orderResult!!,
-            themeColor = themeColor,
-            onDismiss = { onBack() }
-        )
-    }
+    val themeColor = Color(0xFF8B4513)
 
     // 옵션 선택 다이얼로그
     if (showOptionDialog && selectedMenuItem != null) {
@@ -125,6 +66,26 @@ fun RestaurantKioskScreen(
             onAddToCart = { item, option, porkOption ->
                 viewModel.addToCart(item, isPractice, option, porkOption)
                 showOptionDialog = false
+            }
+        )
+    }
+
+    // 장바구니 다이얼로그
+    if (showCartDialog) {
+        CartDialog(
+            cart = cart,
+            totalPrice = totalPrice,
+            themeColor = themeColor,
+            onDismiss = { showCartDialog = false },
+            onUpdateQty = { itemId, delta ->
+                viewModel.updateQuantity(itemId, delta)
+            },
+            onCheckout = {
+                android.util.Log.d("RestaurantKiosk", "CartDialog onCheckout 호출됨")
+                showCartDialog = false
+                android.util.Log.d("RestaurantKiosk", "onStartPayment 호출 시작")
+                onStartPayment()
+                android.util.Log.d("RestaurantKiosk", "onStartPayment 호출 완료")
             }
         )
     }
@@ -152,6 +113,64 @@ fun RestaurantKioskScreen(
                     containerColor = themeColor
                 )
             )
+        },
+        bottomBar = {
+            BottomAppBar(
+                modifier = Modifier.fillMaxWidth().height(120.dp),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
+                containerColor = Color.White,
+                tonalElevation = 8.dp
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxHeight()
+                    ) {
+                        Text("총 금액", fontSize = 16.sp, color = Color.Gray)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            "${NumberFormat.getNumberInstance(Locale.KOREA).format(totalPrice)}원",
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.Black
+                        )
+                    }
+
+                    Button(
+                        onClick = { showCartDialog = true },
+                        modifier = Modifier.height(70.dp).width(210.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = themeColor),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = cart.isNotEmpty()
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text("결제하기", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.width(10.dp))
+                            Surface(
+                                shape = CircleShape,
+                                color = Color.White,
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        "${cart.sumOf { it.quantity }}",
+                                        color = themeColor,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     ) { innerPadding ->
         Row(
@@ -179,7 +198,7 @@ fun RestaurantKioskScreen(
                 }
             }
 
-            // 중앙: 메뉴 그리드 + 상단 미션/가이드
+            // 중앙: 메뉴 그리드
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -199,17 +218,8 @@ fun RestaurantKioskScreen(
                 // 메뉴 그리드
                 val filteredMenu = viewModel.menuItems.filter { it.category == selectedCategory }
 
-                Text(
-                    "전체 메뉴: ${viewModel.menuItems.size}, 필터됨: ${filteredMenu.size}",
-                    modifier = Modifier.padding(8.dp),
-                    fontSize = 14.sp,
-                    color = Color.Red,
-                    fontWeight = FontWeight.Bold
-                )
-
-                // ✅ 여기가 핵심! LazyVerticalGrid에 명확한 높이를 줍니다
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(3),
+                    columns = GridCells.Fixed(2),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(8.dp),
@@ -234,89 +244,6 @@ fun RestaurantKioskScreen(
                     }
                 }
             }
-
-            // 오른쪽: 장바구니
-            Column(
-                modifier = Modifier
-                    .width(120.dp)
-                    .fillMaxHeight()
-                    .background(Color.White)
-                    .padding(20.dp)
-            ) {
-                Text(
-                    "주문 내역",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = themeColor
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 장바구니 아이템
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    if (cart.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                "메뉴를 선택해주세요",
-                                color = Color.Gray,
-                                fontSize = 16.sp
-                            )
-                        }
-                    } else {
-                        cart.forEach { cartItem ->
-                            CartItemRow(
-                                cartItem = cartItem,
-                                onQuantityChange = { delta ->
-                                    viewModel.updateQuantity(cartItem.menuItem.id, delta)
-                                },
-                                themeColor = themeColor
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
-                    }
-                }
-
-                Divider(thickness = 2.dp, color = Color(0xFFE5E7EB))
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 총액
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("총 금액", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text(
-                        "${NumberFormat.getNumberInstance(Locale.KOREA).format(totalPrice)}원",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = themeColor
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 결제 버튼
-                Button(
-                    onClick = { viewModel.startPayment() },  // ✅ 결제 플로우 시작
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = themeColor),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = cart.isNotEmpty()
-                ) {
-                    Text(
-                        "결제하기",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
         }
     }
 }
@@ -335,8 +262,8 @@ private fun CategoryButton(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(60.dp)
-            .padding(horizontal = 12.dp),
+            .height(56.dp)
+            .padding(horizontal = 6.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = bgColor,
             contentColor = textColor
@@ -345,7 +272,7 @@ private fun CategoryButton(
     ) {
         Text(
             category,
-            fontSize = 18.sp,
+            fontSize = 15.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
         )
     }
@@ -396,39 +323,45 @@ private fun PracticeGuideCard(step: Int, onStart: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD)),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(8.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
                 Icon(
                     Icons.Default.Lightbulb,
                     contentDescription = null,
                     tint = Color(0xFF1976D2),
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(24.dp)
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     guideText,
-                    fontSize = 16.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF0D47A1)
                 )
             }
 
             if (step == 0) {
+                Spacer(modifier = Modifier.width(8.dp))
                 Button(
                     onClick = onStart,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF1976D2)
-                    )
+                    ),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.height(36.dp)
                 ) {
-                    Text("시작하기")
+                    Text("시작하기", fontSize = 14.sp)
                 }
             }
         }
@@ -442,35 +375,10 @@ private fun MenuItemCard(
     onClick: () -> Unit,
     showGuide: Boolean
 ) {
-    // ✅ 이 로그 추가!
-    android.util.Log.e("RESTAURANT_DEBUG", "MenuItemCard 렌더링: ${item.name}")
-
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.05f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(800),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "scale"
-    )
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(0.85f)
-            .then(
-                if (showGuide) Modifier.border(
-                    3.dp,
-                    Brush.horizontalGradient(
-                        listOf(themeColor, themeColor.copy(alpha = 0.5f))
-                    ),
-                    RoundedCornerShape(12.dp)
-                )
-                else Modifier
-            )
-            .clickable { onClick() },
+            .height(240.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -478,6 +386,7 @@ private fun MenuItemCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .clickable { onClick() }
                 .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
@@ -486,7 +395,7 @@ private fun MenuItemCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
+                    .height(140.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(Color(0xFFF5F5F5)),
                 contentAlignment = Alignment.Center
@@ -494,6 +403,8 @@ private fun MenuItemCard(
                 val imageRes = when (item.name) {
                     "돼지국밥" -> R.drawable.dwaeji_gukbap
                     "순대국밥" -> R.drawable.sundae_gukbap
+                    "뚝배기불고기" -> R.drawable.ttukbaegi_bulgogi
+                    "육개장" -> R.drawable.yukgaejang
                     "뼈해장국" -> R.drawable.ppyeo_haejangguk
                     "순대 모듬" -> R.drawable.assorted_sundae
                     "수육 (小)", "수육 (中)", "수육 (大)" -> R.drawable.sooyuk
@@ -511,7 +422,9 @@ private fun MenuItemCard(
                     Image(
                         painter = painterResource(id = imageRes),
                         contentDescription = item.name,
-                        modifier = Modifier.fillMaxSize().padding(8.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(8.dp),
                         contentScale = ContentScale.Fit
                     )
                 } else {
@@ -521,7 +434,7 @@ private fun MenuItemCard(
                             "사이드" -> "🥓"
                             else -> "🍺"
                         },
-                        fontSize = 48.sp
+                        fontSize = 56.sp
                     )
                 }
             }
@@ -531,19 +444,103 @@ private fun MenuItemCard(
             // 메뉴 이름
             Text(
                 item.name,
-                fontSize = 16.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
-                maxLines = 2
+                maxLines = 1,
+                modifier = Modifier.fillMaxWidth()
             )
 
             // 가격
             Text(
                 "${NumberFormat.getNumberInstance(Locale.KOREA).format(item.price)}원",
-                fontSize = 14.sp,
+                fontSize = 16.sp,
                 color = themeColor,
                 fontWeight = FontWeight.SemiBold
             )
+        }
+    }
+}
+
+@Composable
+private fun CartDialog(
+    cart: List<CartItem>,
+    totalPrice: Int,
+    themeColor: Color,
+    onDismiss: () -> Unit,
+    onUpdateQty: (String, Int) -> Unit,
+    onCheckout: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth().heightIn(max = 600.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("장바구니", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "닫기", tint = Color.Gray)
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
+
+                if (cart.isEmpty()) {
+                    Box(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("장바구니가 비었습니다", fontSize = 18.sp, color = Color.Gray)
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(cart.size) { index ->
+                            CartItemRow(
+                                cartItem = cart[index],
+                                onQuantityChange = { delta ->
+                                    onUpdateQty(cart[index].menuItem.id, delta)
+                                },
+                                themeColor = themeColor
+                            )
+                        }
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("총 금액", fontSize = 20.sp, fontWeight = FontWeight.Medium)
+                    Text(
+                        "${NumberFormat.getNumberInstance(Locale.KOREA).format(totalPrice)}원",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = themeColor
+                    )
+                }
+
+                Button(
+                    onClick = onCheckout,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    enabled = cart.isNotEmpty(),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = themeColor)
+                ) {
+                    Text("결제하기", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }
@@ -555,32 +552,34 @@ private fun CartItemRow(
     themeColor: Color
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFFF9F9F9), RoundedCornerShape(8.dp))
-            .padding(12.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 cartItem.menuItem.name,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium
             )
             if (cartItem.selectedOption != null && cartItem.selectedOption.price > 0) {
-                Text(
-                    "(${cartItem.selectedOption.name})",
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
+                val options = cartItem.selectedOption.name.split(", ")
+                options.forEach { opt ->
+                    if (!opt.contains("보통") && !opt.contains("수육 없음")) {
+                        Text(
+                            "  • $opt",
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        )
+                    }
+                }
             }
             Text(
                 "${NumberFormat.getNumberInstance(Locale.KOREA).format(
                     (cartItem.menuItem.price + (cartItem.selectedOption?.price ?: 0)) * cartItem.quantity
                 )}원",
-                fontSize = 14.sp,
-                color = themeColor
+                fontSize = 16.sp,
+                color = Color.Gray
             )
         }
 
@@ -588,95 +587,31 @@ private fun CartItemRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            IconButton(
+            OutlinedButton(
                 onClick = { onQuantityChange(-1) },
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(Color(0xFFE5E7EB), CircleShape)
+                modifier = Modifier.size(36.dp),
+                shape = CircleShape,
+                contentPadding = PaddingValues(0.dp)
             ) {
-                Icon(
-                    Icons.Default.Remove,
-                    contentDescription = "빼기",
-                    tint = Color.Black,
-                    modifier = Modifier.size(16.dp)
-                )
+                Icon(Icons.Default.Remove, contentDescription = "감소", modifier = Modifier.size(16.dp))
             }
 
             Text(
                 "${cartItem.quantity}",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.width(24.dp),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.widthIn(min = 24.dp),
                 textAlign = TextAlign.Center
             )
 
-            IconButton(
+            OutlinedButton(
                 onClick = { onQuantityChange(1) },
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(themeColor, CircleShape)
+                modifier = Modifier.size(36.dp),
+                shape = CircleShape,
+                contentPadding = PaddingValues(0.dp)
             ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "더하기",
-                    tint = Color.White,
-                    modifier = Modifier.size(16.dp)
-                )
+                Icon(Icons.Default.Add, contentDescription = "증가", modifier = Modifier.size(16.dp))
             }
         }
     }
-}
-
-@Composable
-private fun OrderResultDialog(
-    result: String,
-    themeColor: Color,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            Button(
-                onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(containerColor = themeColor)
-            ) {
-                Text("확인")
-            }
-        },
-        title = {
-            Text(
-                when (result) {
-                    "success" -> "미션 성공!"
-                    "fail" -> "미션 실패"
-                    else -> "주문 완료"
-                },
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Text(
-                when (result) {
-                    "success" -> "정확하게 주문하셨습니다!"
-                    "fail" -> "주문 내역이 미션과 다릅니다. 다시 시도해보세요."
-                    else -> "주문이 완료되었습니다."
-                }
-            )
-        },
-        icon = {
-            Icon(
-                when (result) {
-                    "success" -> Icons.Default.CheckCircle
-                    "fail" -> Icons.Default.Cancel
-                    else -> Icons.Default.Check
-                },
-                contentDescription = null,
-                tint = when (result) {
-                    "success" -> Color(0xFF4CAF50)
-                    "fail" -> Color(0xFFF44336)
-                    else -> themeColor
-                },
-                modifier = Modifier.size(48.dp)
-            )
-        }
-    )
 }
