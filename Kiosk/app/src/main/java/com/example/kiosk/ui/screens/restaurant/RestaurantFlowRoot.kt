@@ -3,6 +3,7 @@ package com.example.kiosk.ui.screens.restaurant
 import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
+import com.example.kiosk.ui.screens.OrderResultScreen
 
 @Composable
 fun RestaurantFlowRoot(
@@ -40,13 +41,15 @@ fun RestaurantFlowRoot(
 
     // 주문 완료 화면 (실전 모드에서만 표시)
     if (orderResult != null) {
-        RestaurantOrderResultScreen(
+        OrderResultScreen(
             result = orderResult!!,
+            mission = currentMission,
             cart = cart,
             totalPrice = totalPrice,
-            mission = currentMission,
-            viewModel = viewModel,
-            onExit = onExit
+            onExit = {
+                viewModel.reset()
+                onExit()
+            }
         )
         return
     }
