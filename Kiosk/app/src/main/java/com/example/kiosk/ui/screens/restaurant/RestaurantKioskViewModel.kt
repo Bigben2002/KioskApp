@@ -7,34 +7,14 @@ import com.example.kiosk.data.repository.HistoryRepository
 import com.example.kiosk.data.model.MenuItem
 import com.example.kiosk.data.model.ItemOption
 import com.example.kiosk.data.model.CartItem
+import com.example.kiosk.data.model.Mission
+import com.example.kiosk.data.model.RequiredItem
+import com.example.kiosk.data.model.HistoryRecord
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.delay
-
-// ✅ 파일 맨 위에 enum 추가
-enum class PaymentStep {
-    NONE,              // 결제 전
-    METHOD_SELECT,     // 결제 방식 선택
-    CARD_INSERT,       // 카드 삽입 대기
-    QR_SCAN,          // QR 스캔 대기
-    PROCESSING,       // 결제 처리 중
-    COMPLETE          // 결제 완료
-}
-
-data class RequiredItem(val name: String, val quantity: Int)
-
-data class Mission(val description: String, val required: List<RequiredItem>)
-
-data class HistoryRecord(
-    val id: String,
-    val date: String,
-    val mission: String,
-    val success: Boolean,
-    val userOrder: List<RequiredItem>,
-    val timestamp: Long
-)
 
 class RestaurantKioskViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -58,46 +38,14 @@ class RestaurantKioskViewModel(application: Application) : AndroidViewModel(appl
     private val _selectedCategory = MutableStateFlow("국밥류")
     val selectedCategory = _selectedCategory.asStateFlow()
 
-    // ✅ 결제 플로우 상태 추가
-    private val _paymentStep = MutableStateFlow(PaymentStep.NONE)
-    val paymentStep = _paymentStep.asStateFlow()
-
-    private val _selectedPaymentMethod = MutableStateFlow<String?>(null)
-    val selectedPaymentMethod = _selectedPaymentMethod.asStateFlow()
-
-    // ✅ 결제 플로우 시작
-    fun startPayment() {
-        _paymentStep.value = PaymentStep.METHOD_SELECT
-    }
-
-    // ✅ 결제 방식 선택
-    fun selectPaymentMethod(method: String) {
-        _selectedPaymentMethod.value = method
-        _paymentStep.value = when (method) {
-            "CARD" -> PaymentStep.CARD_INSERT
-            "QR" -> PaymentStep.QR_SCAN
-            else -> PaymentStep.METHOD_SELECT
-        }
-    }
-
-    fun proceedToProcessing() {
-        viewModelScope.launch {
-            processPayment()
-        }
-    }
-
-    // ✅ 결제 처리
-    private suspend fun processPayment() {
-        _paymentStep.value = PaymentStep.PROCESSING
-        delay(2000) // 결제 처리 시뮬레이션
-        _paymentStep.value = PaymentStep.COMPLETE
-    }
-
     fun setPracticeStep(step: Int) {
         _practiceStep.value = step
     }
 
-    // 옵션 정의 - ItemOption(name, price)
+    fun clearOrderResult() {
+        _orderResult.value = null
+    }
+
     val specialOptions = listOf(
         ItemOption("보통", 0),
         ItemOption("특 (+1,000원)", 1000)
@@ -108,13 +56,12 @@ class RestaurantKioskViewModel(application: Application) : AndroidViewModel(appl
         ItemOption("수육 추가 (+5,000원)", 5000)
     )
 
-    // 메뉴 데이터
     val menuItems = listOf(
         // 국밥류 (돼지국밥, 순대국밥만 특 옵션 가능)
         MenuItem("1", "돼지국밥", 9000, "국밥류", specialOptions),
         MenuItem("2", "순대국밥", 9000, "국밥류", specialOptions),
-        MenuItem("3", "내장국밥", 10000, "국밥류", emptyList()),
-        MenuItem("4", "섞어국밥", 11000, "국밥류", emptyList()),
+        MenuItem("3", "뚝배기불고기", 10000, "국밥류", emptyList()),
+        MenuItem("4", "육개장", 11000, "국밥류", emptyList()),
         MenuItem("5", "뼈해장국", 10000, "국밥류", emptyList()),
 
         // 사이드
@@ -123,7 +70,9 @@ class RestaurantKioskViewModel(application: Application) : AndroidViewModel(appl
         MenuItem("13", "수육 (中)", 20000, "사이드", emptyList()),
         MenuItem("14", "수육 (大)", 25000, "사이드", emptyList()),
         MenuItem("15", "모듬", 20000, "사이드", emptyList()),
-        MenuItem("16", "김치", 3000, "사이드", emptyList()),
+        MenuItem("16", "공기밥", 1000, "사이드", emptyList()),
+        MenuItem("17", "김치", 0, "사이드", emptyList()),
+        MenuItem("18", "물", 0, "사이드", emptyList()),
 
         // 음료
         MenuItem("21", "소주", 4000, "음료", emptyList()),
@@ -160,10 +109,28 @@ class RestaurantKioskViewModel(application: Application) : AndroidViewModel(appl
                     listOf(RequiredItem("돼지국밥", 2), RequiredItem("수육 (小)", 1))),
                 Mission("순대국밥 1개, 소주 2병을 주문해보세요",
                     listOf(RequiredItem("순대국밥", 1), RequiredItem("소주", 2))),
-                Mission("섞어국밥 1개, 순대 모듬 1개, 맥주 1병을 주문해보세요",
-                    listOf(RequiredItem("섞어국밥", 1), RequiredItem("순대 모듬", 1), RequiredItem("맥주", 1))),
-                Mission("내장국밥 2개, 김치 1개를 주문해보세요",
-                    listOf(RequiredItem("내장국밥", 2), RequiredItem("김치", 1)))
+                Mission("뚝배기불고기 1개, 순대 모듬 1개, 맥주 1병을 주문해보세요",
+                    listOf(RequiredItem("뚝배기불고기", 1), RequiredItem("순대 모듬", 1), RequiredItem("맥주", 1))),
+                Mission("육개장 2개, 공기밥 1개를 주문해보세요",
+                    listOf(RequiredItem("육개장", 2), RequiredItem("공기밥", 1))),
+                Mission("뼈해장국 1개, 공기밥 2개, 콜라 1개를 주문해보세요",
+                    listOf(RequiredItem("뼈해장국", 1), RequiredItem("공기밥", 2), RequiredItem("콜라", 1))),
+                Mission("순대국밥 2개, 순대 모듬 1개를 주문해보세요",
+                    listOf(RequiredItem("순대국밥", 2), RequiredItem("순대 모듬", 1))),
+                Mission("돼지국밥 1개, 수육 (中) 1개, 소주 1병을 주문해보세요",
+                    listOf(RequiredItem("돼지국밥", 1), RequiredItem("수육 (中)", 1), RequiredItem("소주", 1))),
+                Mission("뚝배기불고기 2개, 사이다 2개를 주문해보세요",
+                    listOf(RequiredItem("뚝배기불고기", 2), RequiredItem("사이다", 2))),
+                Mission("육개장 1개, 모듬 1개, 맥주 2병을 주문해보세요",
+                    listOf(RequiredItem("육개장", 1), RequiredItem("모듬", 1), RequiredItem("맥주", 2))),
+                Mission("돼지국밥(특) 1개를 주문해보세요",
+                    listOf(RequiredItem("돼지국밥", 1, option = "특"))),
+                Mission("순대국밥(특) 1개, 공기밥 1개를 주문해보세요",
+                    listOf(RequiredItem("순대국밥", 1, option = "특"), RequiredItem("공기밥", 1))),
+                Mission("돼지국밥(수육 추가) 1개를 주문해보세요",
+                    listOf(RequiredItem("돼지국밥", 1, option = "수육 추가"))),
+                Mission("순대국밥(특, 수육 추가) 1개, 맥주 1병을 주문해보세요",
+                    listOf(RequiredItem("순대국밥", 1, option = "특, 수육 추가"), RequiredItem("맥주", 1)))
             )
             _currentMission.value = missions.random()
         } else {
@@ -187,27 +154,30 @@ class RestaurantKioskViewModel(application: Application) : AndroidViewModel(appl
     fun addToCart(item: MenuItem, isPractice: Boolean, option: ItemOption? = null, porkOption: ItemOption? = null) {
         val currentCart = _cart.value.toMutableList()
 
+        // 수육 추가 옵션이 선택된 경우, 옵션들을 결합
+        val finalOption = if (porkOption != null && porkOption.name.contains("수육 추가")) {
+            // 기본 옵션과 수육 추가 옵션을 결합
+            val optionName = if (option != null && option.price > 0) {
+                "${option.name}, ${porkOption.name}"
+            } else if (option != null) {
+                porkOption.name  // "보통"인 경우 수육 추가만 표시
+            } else {
+                porkOption.name
+            }
+            val optionPrice = (option?.price ?: 0) + porkOption.price
+            ItemOption(optionName, optionPrice)
+        } else {
+            option
+        }
+
         val existing = currentCart.find {
-            it.menuItem.id == item.id && it.selectedOption == option
+            it.menuItem.id == item.id && it.selectedOption == finalOption
         }
 
         if (existing != null) {
             existing.quantity += 1
         } else {
-            currentCart.add(CartItem(item, 1, selectedOption = option))
-        }
-
-        // 수육 추가 옵션이 선택된 경우 (name으로 확인)
-        if (porkOption != null && porkOption.name.contains("수육 추가")) {
-            val porkItem = menuItems.find { it.id == "12" } // 수육 (小)
-            if (porkItem != null) {
-                val existingPork = currentCart.find { it.menuItem.id == "12" }
-                if (existingPork != null) {
-                    existingPork.quantity += 1
-                } else {
-                    currentCart.add(CartItem(porkItem, 1))
-                }
-            }
+            currentCart.add(CartItem(item, 1, selectedOption = finalOption))
         }
 
         _cart.value = currentCart
@@ -236,7 +206,6 @@ class RestaurantKioskViewModel(application: Application) : AndroidViewModel(appl
         }
     }
 
-    // ✅ 기존 checkout 함수 수정
     fun checkout(isPractice: Boolean) {
         val mission = _currentMission.value
         if (!isPractice && mission != null) {
@@ -246,22 +215,60 @@ class RestaurantKioskViewModel(application: Application) : AndroidViewModel(appl
         } else {
             _orderResult.value = "complete"
         }
-
-        // ✅ 결제 상태 초기화
-        _paymentStep.value = PaymentStep.NONE
-        _selectedPaymentMethod.value = null
     }
 
-    // ✅ 결제 취소
-    fun cancelPayment() {
-        _paymentStep.value = PaymentStep.NONE
-        _selectedPaymentMethod.value = null
+    fun reset() {
+        _cart.value = emptyList()
+        _totalPrice.value = 0
+        _orderResult.value = null
+        _currentMission.value = null
+        _practiceStep.value = 0
+        _selectedCategory.value = "국밥류"
     }
 
     private fun checkMissionSuccess(mission: Mission, cart: List<CartItem>): Boolean {
-        if (cart.size != mission.required.size) return false
+        val cartTotal = cart.sumOf { it.quantity }
+        val missionTotal = mission.required.sumOf { it.quantity }
+        if (cartTotal != missionTotal) {
+            android.util.Log.d("RESTAURANT_MISSION", "❌ 전체 개수 불일치: 장바구니 $cartTotal, 미션 $missionTotal")
+            return false
+        }
+
         return mission.required.all { req ->
-            cart.find { it.menuItem.name == req.name }?.quantity == req.quantity
+            android.util.Log.d("RESTAURANT_MISSION", "🔎 미션 확인: ${req.name} x${req.quantity}, 옵션: ${req.option}")
+
+            val matchingQuantity = cart.filter { item ->
+                val nameMatch = item.menuItem.name == req.name
+
+                val optionMatch = if (req.option == null) {
+                    true
+                } else {
+                    val requiredOptions = req.option.split(",").map { it.trim() }
+                    val cartOptionName = item.selectedOption?.name ?: ""
+
+                    val allOptionsMatch = requiredOptions.all { requiredOpt ->
+                        cartOptionName.contains(requiredOpt)
+                    }
+
+                    android.util.Log.d("RESTAURANT_MISSION",
+                        "   - 필수 옵션: $requiredOptions, 장바구니 옵션: $cartOptionName, 일치: $allOptionsMatch")
+
+                    allOptionsMatch
+                }
+
+                val isMatch = nameMatch && optionMatch
+
+                if (nameMatch) {
+                    android.util.Log.d("RESTAURANT_MISSION",
+                        "   - 장바구니: ${item.menuItem.name}, 옵션: ${item.selectedOption?.name} → 일치: $isMatch")
+                }
+
+                isMatch
+            }.sumOf { it.quantity }
+
+            val success = matchingQuantity == req.quantity
+            android.util.Log.d("RESTAURANT_MISSION", "   👉 수량: $matchingQuantity / 필요: ${req.quantity} → $success")
+            success
         }
     }
 
@@ -270,7 +277,7 @@ class RestaurantKioskViewModel(application: Application) : AndroidViewModel(appl
         val record = com.example.kiosk.data.model.HistoryRecord(
             id = System.currentTimeMillis().toString(),
             date = dateFormat.format(Date()),
-            mission = mission.description,
+            mission = mission.text,
             success = success,
             userOrder = _cart.value.map {
                 com.example.kiosk.data.model.RequiredItem(it.menuItem.name, it.quantity)

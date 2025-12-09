@@ -15,11 +15,10 @@ import com.example.kiosk.ui.screens.KioskSimulatorScreen
 import com.example.kiosk.ui.screens.burger.BurgerKioskScreen
 import com.example.kiosk.ui.screens.cafe.CafeKioskScreen
 import com.example.kiosk.ui.screens.cinema.CinemaFlowRoot
-// 👇 [추가됨] 영화관 실전 모드 import
 import com.example.kiosk.ui.screens.cinema.real.CinemaRealFlowRoot
 import com.example.kiosk.ui.screens.main.MainMenuScreen
 import com.example.kiosk.ui.screens.main.PracticeKioskSelectScreen
-import com.example.kiosk.ui.screens.restaurant.RestaurantKioskScreen
+import com.example.kiosk.ui.screens.restaurant.RestaurantFlowRoot
 import com.example.kiosk.ui.theme.KioskTheme
 import com.google.firebase.FirebaseApp
 
@@ -102,11 +101,10 @@ fun KioskApp() {
                         onExit = { currentScreen = ScreenState.MENU }
                     )
                 }
-                // ✅ 국밥집 추가
                 KioskType.RESTAURANT -> {
-                    RestaurantKioskScreen(
-                        isPractice = true,
-                        onBack = { currentScreen = ScreenState.MENU }
+                    RestaurantFlowRoot(
+                        isPracticeMode = true,
+                        onExit = { currentScreen = ScreenState.MENU }
                     )
                 }
                 else -> {
@@ -139,11 +137,10 @@ fun KioskApp() {
                         onExit = { currentScreen = ScreenState.MENU }
                     )
                 }
-                // ✅ 국밥집 추가
                 KioskType.RESTAURANT -> {
-                    RestaurantKioskScreen(
-                        isPractice = false,
-                        onBack = { currentScreen = ScreenState.MENU }
+                    RestaurantFlowRoot(
+                        isPracticeMode = false,
+                        onExit = { currentScreen = ScreenState.MENU }
                     )
                 }
                 else -> {

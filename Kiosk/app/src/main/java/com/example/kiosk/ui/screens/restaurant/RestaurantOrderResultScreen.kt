@@ -21,6 +21,7 @@ import com.example.kiosk.data.model.CartItem
 import com.example.kiosk.ui.components.KioskCard
 import java.text.NumberFormat
 import java.util.Locale
+import com.example.kiosk.data.model.Mission
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,6 +30,7 @@ fun RestaurantOrderResultScreen(
     cart: List<CartItem>,
     totalPrice: Int,
     mission: Mission?,
+    viewModel: RestaurantKioskViewModel,
     onExit: () -> Unit
 ) {
     val themeColor = when (result) {
@@ -73,7 +75,6 @@ fun RestaurantOrderResultScreen(
         ) {
             Spacer(modifier = Modifier.height(32.dp))
 
-            // 결과 아이콘
             Surface(
                 shape = CircleShape,
                 color = themeColor,
@@ -111,7 +112,6 @@ fun RestaurantOrderResultScreen(
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // 실패 시 미션 리마인드
             if (result == "fail" && mission != null) {
                 KioskCard(
                     backgroundColor = Color(0xFFFEFCE8),
@@ -128,7 +128,7 @@ fun RestaurantOrderResultScreen(
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
-                        Text(mission.description, fontSize = 18.sp, color = Color(0xFF713F12))
+                        Text(mission.text, fontSize = 18.sp, color = Color(0xFF713F12))
                     }
                 }
             }
@@ -211,7 +211,10 @@ fun RestaurantOrderResultScreen(
             }
 
             Button(
-                onClick = onExit,
+                onClick = {
+                    viewModel.reset()
+                    onExit()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp),

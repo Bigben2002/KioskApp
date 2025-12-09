@@ -2,23 +2,50 @@ package com.example.kiosk.ui.screens.restaurant
 
 import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
 
 @Composable
 fun RestaurantFlowRoot(
     isPracticeMode: Boolean,
-    onExit: () -> Unit,
-    viewModel: RestaurantKioskViewModel = viewModel()
+    onExit: () -> Unit
 ) {
-    val paymentStep by viewModel.paymentStep.collectAsState()
-    val orderResult by viewModel.orderResult.collectAsState()
+    val sessionId = remember { System.currentTimeMillis().toString() }
 
-    // 주문 완료 화면
+    val viewModel: RestaurantKioskViewModel = viewModel(key = "restaurant_$sessionId")
+
+    val cart by viewModel.cart.collectAsState()
+    val totalPrice by viewModel.totalPrice.collectAsState()
+    val orderResult by viewModel.orderResult.collectAsState()
+    val currentMission by viewModel.currentMission.collectAsState()
+
+    var paymentStep by remember { mutableStateOf("MENU") }
+    var selectedPaymentMethod by remember { mutableStateOf("") }
+
+    val isInitialized = remember { mutableStateOf(false) }
+
+    SideEffect {
+        if (!isInitialized.value) {
+            android.util.Log.d("RestaurantFlow", "=== SideEffect: 첫 진입, 초기화 시작 ===")
+            viewModel.clearOrderResult()
+            isInitialized.value = true
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        android.util.Log.d("RestaurantFlow", "=== LaunchedEffect: init 호출 ===")
+        viewModel.init(isPracticeMode)
+    }
+
+    android.util.Log.d("RestaurantFlow", "Recompose - paymentStep: $paymentStep, orderResult: $orderResult")
+
+    // 주문 완료 화면 (실전 모드에서만 표시)
     if (orderResult != null) {
         RestaurantOrderResultScreen(
             result = orderResult!!,
-            cart = viewModel.cart.collectAsState().value,
-            totalPrice = viewModel.totalPrice.collectAsState().value,
-            mission = viewModel.currentMission.collectAsState().value,
+            cart = cart,
+            totalPrice = totalPrice,
+            mission = currentMission,
+            viewModel = viewModel,
             onExit = onExit
         )
         return
@@ -26,44 +53,62 @@ fun RestaurantFlowRoot(
 
     // 결제 플로우 화면들
     when (paymentStep) {
-        PaymentStep.METHOD_SELECT -> {
+        "PAY_METHOD" -> {
             RestaurantPaymentMethodSelectScreen(
-                onPaid = { method -> viewModel.selectPaymentMethod(method) },
-                onBack = { viewModel.cancelPayment() }
+                onPaid = { method ->
+                    selectedPaymentMethod = method
+                    paymentStep = "PAY_PROCESS"
+                },
+                onBack = { paymentStep = "MENU" }
             )
             return
         }
-        PaymentStep.CARD_INSERT -> {
-            RestaurantPaymentCardInsertScreen(
-                onProceed = { viewModel.proceedToProcessing() }
-            )
-            return
-        }
-        PaymentStep.QR_SCAN -> {
-            RestaurantPaymentQrScanScreen(
-                onProceed = { viewModel.proceedToProcessing() }
-            )
-            return
-        }
-        PaymentStep.PROCESSING -> {
-            RestaurantPaymentProcessingScreen()
-            return
-        }
-        PaymentStep.COMPLETE -> {
+        "PAY_PROCESS" -> {
+            var isProcessing by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) {
-                viewModel.checkout(isPracticeMode)
+                delay(2000)
+                isProcessing = true
+                delay(2000)
+                paymentStep = "PAY_SUCCESS"
+            }
+            if (isProcessing) {
+                RestaurantPaymentProcessingScreen()
+            } else {
+                if (selectedPaymentMethod == "CARD") {
+                    RestaurantPaymentCardInsertScreen()
+                } else {
+                    RestaurantPaymentQrScanScreen()
+                }
             }
             return
         }
-        else -> {
-            // 일반 키오스크 화면
+        "PAY_SUCCESS" -> {
+            RestaurantPaymentSuccessScreen(
+                cart = cart,
+                totalPrice = totalPrice,
+                isPracticeMode = isPracticeMode,
+                onDone = {
+                    viewModel.checkout(isPracticeMode)
+
+                    if (isPracticeMode) {
+                        onExit()
+                    } else {
+                        paymentStep = "MENU"
+                    }
+                }
+            )
+            return
         }
     }
 
-    // 메인 키오스크 화면
+    // 메인 키오스크 화면 (paymentStep == "MENU"일 때만)
     RestaurantKioskScreen(
         isPractice = isPracticeMode,
         onBack = onExit,
-        viewModel = viewModel
+        viewModel = viewModel,
+        onStartPayment = {
+            android.util.Log.d("RestaurantFlow", "onStartPayment 호출됨!")
+            paymentStep = "PAY_METHOD"
+        }
     )
 }
