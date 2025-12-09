@@ -27,12 +27,10 @@ import java.util.Locale
 import java.text.SimpleDateFormat
 import java.util.Date
 
-// 레스토랑 테마 색상 (갈색)
+// 식당 테마 색상 (갈색)
 private val RestaurantThemeColor = Color(0xFF8B4513)
 
-// ------------------------------------------------------------
-// 1. 결제 방식 선택 화면 (레스토랑 버전)
-// ------------------------------------------------------------
+// 결제 방식 선택 화면
 @Composable
 fun RestaurantPaymentMethodSelectScreen(
     onPaid: (String) -> Unit,
@@ -106,9 +104,7 @@ private fun PaymentMethodCard(
     }
 }
 
-// ------------------------------------------------------------
-// 2. 안내 화면들 (카드 삽입 / QR 스캔 / 로딩)
-// ------------------------------------------------------------
+// 안내 화면들 (카드 삽입 / QR 스캔 / 로딩)
 @Composable
 fun RestaurantPaymentCardInsertScreen() {
     GuideScreen(
@@ -152,9 +148,7 @@ private fun GuideScreen(icon: androidx.compose.ui.graphics.vector.ImageVector, t
     }
 }
 
-// ------------------------------------------------------------
-// 3. 결제 완료 (영수증) 화면 - 레스토랑 전용
-// ------------------------------------------------------------
+// 결제 완료/영수증 화면
 @Composable
 fun RestaurantPaymentSuccessScreen(
     cart: List<CartItem>,
@@ -162,9 +156,9 @@ fun RestaurantPaymentSuccessScreen(
     isPracticeMode: Boolean,
     onDone: () -> Unit
 ) {
-    val dateFormat = SimpleDateFormat("yyyy.MM.dd HH:mm", Locale.KOREA)
+    val dateFormat = SimpleDateFormat("yyyy.MM.dd HH:mm", Locale.getDefault())
     val now = Date()
-    // 주문 번호 생성 (랜덤)
+    // 주문 번호 랜덤으로 생성
     val orderNumber = remember { (100..999).random() }
 
     Column(
@@ -177,7 +171,6 @@ fun RestaurantPaymentSuccessScreen(
     ) {
         Spacer(modifier = Modifier.height(100.dp))
 
-        // 체크 아이콘
         Surface(shape = CircleShape, color = RestaurantThemeColor, modifier = Modifier.size(80.dp)) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp))
@@ -197,7 +190,6 @@ fun RestaurantPaymentSuccessScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                // 주문 번호 강조
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -269,31 +261,50 @@ fun ReceiptRow(label: String, value: String) {
 @Composable
 fun RestaurantReceiptItemRow(item: CartItem) {
     Row(
-        modifier = Modifier.fillMaxSize().padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
     ) {
-        // 1. 메뉴 이름 및 옵션 표시
+        // 메뉴 이름 및 옵션 표시
         Column(modifier = Modifier.weight(1f)) {
             Text(item.menuItem.name, fontSize = 16.sp, fontWeight = FontWeight.Medium)
 
-            // 선택된 옵션이 있으면 표시 (레스토랑은 단일 옵션만 사용)
+            // 선택된 옵션이 있으면 표시
             if (item.selectedOption != null) {
-                Text("└ ${item.selectedOption.name}", fontSize = 14.sp, color = Color.Gray)
+                val options = item.selectedOption.name.split(", ")
+                options.forEach { opt ->
+                    if (!opt.contains("보통") && !opt.contains("수육 없음")) {
+                        Text("└ $opt", fontSize = 14.sp, color = Color.Gray)
+                    }
+                }
             }
         }
 
-        // 2. 수량 및 가격 표시
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("${item.quantity}개", fontSize = 16.sp, color = Color.Black)
-            Spacer(modifier = Modifier.width(16.dp))
-
+        // 수량 및 가격 표시
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End
+        ) {
             val optionPrice = item.selectedOption?.price ?: 0
             val price = (item.menuItem.price + optionPrice) * item.quantity
 
+            // 개수를 고정 너비로 설정하여 정렬 맞춤
+            Text(
+                "${item.quantity}개",
+                fontSize = 16.sp,
+                color = Color.Black,
+                modifier = Modifier.width(40.dp),
+                textAlign = TextAlign.End
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // 가격을 고정 너비로 설정하여 정렬 맞춤
             Text(
                 "${NumberFormat.getNumberInstance(Locale.KOREA).format(price)}원",
                 fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.width(80.dp),
+                textAlign = TextAlign.End
             )
         }
     }

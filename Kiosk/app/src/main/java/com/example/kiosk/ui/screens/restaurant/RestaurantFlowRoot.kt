@@ -7,20 +7,32 @@ import kotlinx.coroutines.delay
 @Composable
 fun RestaurantFlowRoot(
     isPracticeMode: Boolean,
-    onExit: () -> Unit,
-    viewModel: RestaurantKioskViewModel = viewModel()
+    onExit: () -> Unit
 ) {
+    val sessionId = remember { System.currentTimeMillis().toString() }
+
+    val viewModel: RestaurantKioskViewModel = viewModel(key = "restaurant_$sessionId")
+
     val cart by viewModel.cart.collectAsState()
     val totalPrice by viewModel.totalPrice.collectAsState()
     val orderResult by viewModel.orderResult.collectAsState()
     val currentMission by viewModel.currentMission.collectAsState()
 
-    // 로컬 상태로 결제 플로우 관리 (카페 방식)
     var paymentStep by remember { mutableStateOf("MENU") }
     var selectedPaymentMethod by remember { mutableStateOf("") }
 
-    // 초기화
+    val isInitialized = remember { mutableStateOf(false) }
+
+    SideEffect {
+        if (!isInitialized.value) {
+            android.util.Log.d("RestaurantFlow", "=== SideEffect: 첫 진입, 초기화 시작 ===")
+            viewModel.clearOrderResult()
+            isInitialized.value = true
+        }
+    }
+
     LaunchedEffect(Unit) {
+        android.util.Log.d("RestaurantFlow", "=== LaunchedEffect: init 호출 ===")
         viewModel.init(isPracticeMode)
     }
 
@@ -78,11 +90,10 @@ fun RestaurantFlowRoot(
                 onDone = {
                     viewModel.checkout(isPracticeMode)
 
-                    // 카페와 동일한 로직
                     if (isPracticeMode) {
-                        onExit() // 연습 모드 -> 바로 홈으로
+                        onExit()
                     } else {
-                        paymentStep = "MENU" // 실전 모드 -> 결과 화면 표시
+                        paymentStep = "MENU"
                     }
                 }
             )

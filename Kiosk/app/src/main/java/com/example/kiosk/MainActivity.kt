@@ -15,7 +15,6 @@ import com.example.kiosk.ui.screens.KioskSimulatorScreen
 import com.example.kiosk.ui.screens.burger.BurgerKioskScreen
 import com.example.kiosk.ui.screens.cafe.CafeKioskScreen
 import com.example.kiosk.ui.screens.cinema.CinemaFlowRoot
-// 👇 [추가됨] 영화관 실전 모드 import
 import com.example.kiosk.ui.screens.cinema.real.CinemaRealFlowRoot
 import com.example.kiosk.ui.screens.main.MainMenuScreen
 import com.example.kiosk.ui.screens.main.PracticeKioskSelectScreen

@@ -36,7 +36,7 @@ fun RestaurantOptionDialog(
         ItemOption("수육 없음", 0),
         ItemOption("수육 추가 (+5,000원)", 5000)
     )
-    var selectedPorkOption by remember { mutableStateOf(porkOptions[0]) }  // 기본값: 수육 없음
+    var selectedPorkOption by remember { mutableStateOf(porkOptions[0]) }
 
     val isGukbap = menuItem.category == "국밥류"
 
@@ -72,7 +72,7 @@ fun RestaurantOptionDialog(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                // 수육 추가 옵션 (모든 국밥류)
+                // 수육 추가 옵션 (돼지국밥, 순대국밥만)
                 if (isGukbap) {
                     Text("수육 추가", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.height(8.dp))
@@ -83,7 +83,7 @@ fun RestaurantOptionDialog(
                             isSelected = option == selectedPorkOption,
                             themeColor = themeColor,
                             onClick = {
-                                selectedPorkOption = option  // ✅ 무조건 선택, 토글 안 함
+                                selectedPorkOption = option
                             }
                         )
                         Spacer(modifier = Modifier.height(8.dp))

@@ -32,10 +32,12 @@ import java.text.NumberFormat
 import java.util.Locale
 import com.example.kiosk.data.model.MenuItem
 import com.example.kiosk.data.model.CartItem
+import com.example.kiosk.ui.screens.WelcomeScreen
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.ContentScale
 import com.example.kiosk.R
+import com.example.kiosk.data.model.Mission
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,7 +59,6 @@ fun RestaurantKioskScreen(
 
     val themeColor = Color(0xFF8B4513)
 
-    // 옵션 선택 다이얼로그
     if (showOptionDialog && selectedMenuItem != null) {
         RestaurantOptionDialog(
             menuItem = selectedMenuItem!!,
@@ -70,7 +71,6 @@ fun RestaurantKioskScreen(
         )
     }
 
-    // 장바구니 다이얼로그
     if (showCartDialog) {
         CartDialog(
             cart = cart,
@@ -95,7 +95,7 @@ fun RestaurantKioskScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "한성국밥 ${if (isPractice) "연습 모드" else "실전 모드"}",
+                        if (isPractice) "키오스크 연습" else "식당",
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
@@ -115,132 +115,130 @@ fun RestaurantKioskScreen(
             )
         },
         bottomBar = {
-            BottomAppBar(
-                modifier = Modifier.fillMaxWidth().height(120.dp),
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
-                containerColor = Color.White,
-                tonalElevation = 8.dp
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().fillMaxHeight(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxHeight()
-                    ) {
-                        Text("총 금액", fontSize = 16.sp, color = Color.Gray)
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            "${NumberFormat.getNumberInstance(Locale.KOREA).format(totalPrice)}원",
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.Black
-                        )
-                    }
 
+            if (!(isPractice && practiceStep == 0)) {
+                BottomAppBar(
+                    containerColor = Color.White,
+                    tonalElevation = 8.dp
+                ) {
                     Button(
                         onClick = { showCartDialog = true },
-                        modifier = Modifier.height(70.dp).width(210.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .height(56.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = themeColor),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(8.dp),
                         enabled = cart.isNotEmpty()
                     ) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("결제하기", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.width(10.dp))
-                            Surface(
-                                shape = CircleShape,
-                                color = Color.White,
-                                modifier = Modifier.size(28.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        "${cart.sumOf { it.quantity }}",
-                                        color = themeColor,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.ExtraBold
-                                    )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.ShoppingCart, null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("장바구니", fontSize = 18.sp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            "${cart.sumOf { it.quantity }}",
+                                            color = themeColor,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                             }
+                            Text(
+                                "${NumberFormat.getNumberInstance(Locale.KOREA).format(totalPrice)}원",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
             }
         }
     ) { innerPadding ->
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .background(Color(0xFFFAF7F0))
         ) {
-            // 왼쪽: 카테고리 영역
-            Column(
-                modifier = Modifier
-                    .width(100.dp)
-                    .fillMaxHeight()
-                    .background(Color(0xFF6B4423))
-                    .padding(vertical = 16.dp)
-            ) {
-                viewModel.categories.forEach { category ->
-                    CategoryButton(
-                        category = category,
-                        isSelected = category == selectedCategory,
-                        onClick = { viewModel.selectCategory(category) },
-                        themeColor = themeColor
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
+            if (isPractice && practiceStep == 0) {
+                PracticeGuideCard(step = practiceStep, onStart = { viewModel.startPractice() })
+                WelcomeScreen(onStart = { viewModel.startPractice() })
+                return@Scaffold
             }
 
-            // 중앙: 메뉴 그리드
-            Column(
+            if (!isPractice && currentMission != null) {
+                MissionCard(mission = currentMission!!)
+            } else if (isPractice && practiceStep > 0) {
+                PracticeGuideCard(step = practiceStep, onStart = { viewModel.startPractice() })
+            }
+
+            Row(
                 modifier = Modifier
+                    .fillMaxSize()
                     .weight(1f)
-                    .fillMaxHeight()
-                    .background(Color.White)
-                    .padding(16.dp)
             ) {
-                // 미션 또는 연습 가이드
-                if (!isPractice && currentMission != null) {
-                    MissionCard(mission = currentMission!!)
-                    Spacer(modifier = Modifier.height(16.dp))
-                } else if (isPractice) {
-                    PracticeGuideCard(step = practiceStep, onStart = { viewModel.startPractice() })
-                    Spacer(modifier = Modifier.height(16.dp))
+                Column(
+                    modifier = Modifier
+                        .width(110.dp)
+                        .fillMaxHeight()
+                        .background(Color(0xFF6B4423))
+                        .padding(vertical = 16.dp)
+                ) {
+                    viewModel.categories.forEach { category ->
+                        CategoryButton(
+                            category = category,
+                            isSelected = category == selectedCategory,
+                            onClick = { viewModel.selectCategory(category) },
+                            themeColor = themeColor
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
                 }
 
-                // 메뉴 그리드
-                val filteredMenu = viewModel.menuItems.filter { it.category == selectedCategory }
-
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(8.dp),
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
                         .weight(1f)
+                        .fillMaxHeight()
+                        .background(Color.White)
+                        .padding(16.dp)
                 ) {
-                    items(filteredMenu) { item ->
-                        MenuItemCard(
-                            item = item,
-                            themeColor = themeColor,
-                            onClick = {
-                                if (item.category == "국밥류" && item.options.isNotEmpty()) {
-                                    selectedMenuItem = item
-                                    showOptionDialog = true
-                                } else {
-                                    viewModel.addToCart(item, isPractice)
-                                }
-                            },
-                            showGuide = isPractice && practiceStep == 2
-                        )
+                    val filteredMenu = viewModel.menuItems.filter { it.category == selectedCategory }
+
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(8.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(filteredMenu) { item ->
+                            MenuItemCard(
+                                item = item,
+                                themeColor = themeColor,
+                                onClick = {
+                                    if (item.category == "국밥류" && item.options.isNotEmpty()) {
+                                        selectedMenuItem = item
+                                        showOptionDialog = true
+                                    } else {
+                                        viewModel.addToCart(item, isPractice)
+                                    }
+                                },
+                                showGuide = isPractice && practiceStep == 2
+                            )
+                        }
                     }
                 }
             }
@@ -280,33 +278,19 @@ private fun CategoryButton(
 
 @Composable
 private fun MissionCard(mission: Mission) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF4E6)),
-        shape = RoundedCornerShape(12.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFEA580C))
+            .padding(12.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Default.TaskAlt,
-                contentDescription = null,
-                tint = Color(0xFFFF9800),
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text("미션", fontSize = 14.sp, color = Color(0xFFE65100))
-                Text(
-                    mission.description,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
+        Text(
+            "🎯 ${mission.text}",
+            color = Color.White,
+            fontSize = 16.sp,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -320,51 +304,19 @@ private fun PracticeGuideCard(step: Int, onStart: () -> Unit) {
         else -> "연습을 완료했습니다!"
     }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD)),
-        shape = RoundedCornerShape(8.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF2563EB))
+            .padding(12.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    Icons.Default.Lightbulb,
-                    contentDescription = null,
-                    tint = Color(0xFF1976D2),
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    guideText,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF0D47A1)
-                )
-            }
-
-            if (step == 0) {
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(
-                    onClick = onStart,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF1976D2)
-                    ),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    Text("시작하기", fontSize = 14.sp)
-                }
-            }
-        }
+        Text(
+            guideText,
+            color = Color.White,
+            fontSize = 16.sp,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -391,7 +343,6 @@ private fun MenuItemCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // 메뉴 이미지 영역
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -409,7 +360,9 @@ private fun MenuItemCard(
                     "순대 모듬" -> R.drawable.assorted_sundae
                     "수육 (小)", "수육 (中)", "수육 (大)" -> R.drawable.sooyuk
                     "모듬" -> R.drawable.assorted_sundae_sooyuk
+                    "공기밥" -> R.drawable.rice
                     "김치" -> R.drawable.kimchi
+                    "물" -> R.drawable.water
                     "소주" -> R.drawable.soju
                     "맥주" -> R.drawable.beer
                     "콜라" -> R.drawable.cola
@@ -441,19 +394,18 @@ private fun MenuItemCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 메뉴 이름
             Text(
                 item.name,
-                fontSize = 18.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
-                maxLines = 1,
+                maxLines = 2,
+                lineHeight = 18.sp,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // 가격
             Text(
-                "${NumberFormat.getNumberInstance(Locale.KOREA).format(item.price)}원",
+                if (item.price == 0) "무료" else "${NumberFormat.getNumberInstance(Locale.KOREA).format(item.price)}원",
                 fontSize = 16.sp,
                 color = themeColor,
                 fontWeight = FontWeight.SemiBold
